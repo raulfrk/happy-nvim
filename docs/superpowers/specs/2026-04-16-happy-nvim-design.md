@@ -107,7 +107,24 @@ happy-nvim/
 └── README.md
 ```
 
-### 3.2 Principles
+### 3.2 Foundation: kickstart.nvim fork, diverged
+
+The repo is seeded **once** from `nvim-lua/kickstart.nvim` (a single well-
+commented teaching config, ~600 lines in one file). The commented single
+file is split into the module layout in §3.1 as the first commit(s).
+After that, the fork diverges freely — kickstart is not tracked as an
+upstream to merge from. Attribution and the original kickstart comments
+are preserved where the code survives in recognizable form.
+
+Why this starting point rather than pure-raw or LazyVim:
+
+- Pure-raw recreates the bug class that broke MyHappyPlace (keymap drift,
+  phantom-plugin keymaps, hand-wired format-on-save).
+- LazyVim hides the wiring the author needs to see to learn nvim.
+- kickstart gives a vetted baseline, and reading its comments during the
+  split-up is itself power-user training.
+
+### 3.3 Principles
 
 1. **One concern per file.** No plugin file exceeds ~80 lines; split if it does.
 2. **Plugins own their keymaps.** Keymaps live next to the plugin that uses them,
@@ -227,6 +244,10 @@ Flow on `TextYankPost`:
 
 Both clipboards populated, one keystroke.
 
+**Portability.** On a bare terminal (no tmux, no SSH), the `TextYankPost`
+guard short-circuits. `unnamedplus` remains the only clipboard path, which
+is correct for local editing. The module is safe to ship as-is everywhere.
+
 ### 5.3 `tmux/` — popups + Claude integration
 
 Module returns early if `$TMUX` is unset. No keymaps bound outside tmux.
@@ -272,17 +293,11 @@ Payload guards:
 - Selection > 10 KB → confirm prompt before sending.
 - Every send ends with a literal `Enter` key.
 
-### 5.4 `clipboard/` portability
-
-If the user runs happy-nvim on a bare terminal (no tmux, no SSH), the OSC 52
-hook no-ops. `unnamedplus` remains the only clipboard path, which is the
-correct behavior locally.
-
-### 5.5 `remote/` — SSH host frecency + remote ops
+### 5.4 `remote/` — SSH host frecency + remote ops
 
 Pure SSH shell-out. No daemon on the remote. No bulk file copy.
 
-#### 5.5.1 `remote/hosts.lua` — host frecency
+#### 5.4.1 `remote/hosts.lua` — host frecency
 
 Storage: `~/.local/share/happy-nvim/hosts.json`, schema
 `{ host: { visits: int, last_used: unix_ts } }`. Score formula:
@@ -300,7 +315,7 @@ missing locally).
 
 `:HappyHostsPrune` removes entries that have failed to resolve N times in a row.
 
-#### 5.5.2 `remote/dirs.lua` — remote zoxide
+#### 5.4.2 `remote/dirs.lua` — remote zoxide
 
 Per-host cached directory list at
 `~/.local/share/happy-nvim/remote-dirs/<host>.json`, with TTL 7 days.
@@ -321,7 +336,7 @@ pane (or spawns one if `<leader>ss` has not been used).
 
 `<leader>sD` — force-refresh the cached dir list for a chosen host.
 
-#### 5.5.3 `remote/browse.lua` — remote file browse
+#### 5.4.3 `remote/browse.lua` — remote file browse
 
 Thin layer over netrw's built-in `scp://`:
 
@@ -335,7 +350,7 @@ Thin layer over netrw's built-in `scp://`:
   size > 5 MB triggers refusal with a hint: use `:!scp` manually, or press
   `<leader>sO` to force open (sets a per-buffer override flag).
 
-#### 5.5.4 `remote/grep.lua` — remote content grep
+#### 5.4.4 `remote/grep.lua` — remote content grep
 
 No bulk transfer. The remote runs `grep` directly, the only bytes streamed
 back are matching lines (`file:line:content`).
