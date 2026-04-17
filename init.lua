@@ -1,6 +1,19 @@
 -- init.lua — happy-nvim entry point
 -- Order matters: options before keymaps (leader), autocmds, colors, then lazy.
 
+-- Minimum nvim version check. Several locked plugins (noice, nui, mason,
+-- gitsigns) use vim.o.winborder (introduced in 0.11) or the new
+-- vim.lsp.config API. Fail fast with a helpful message instead of a
+-- plugin stack trace.
+if vim.fn.has('nvim-0.11') == 0 then
+  vim.api.nvim_echo({
+    { 'happy-nvim requires Neovim >= 0.11\n', 'ErrorMsg' },
+    { 'You are running ' .. tostring(vim.version()) .. '.\n', 'WarningMsg' },
+    { 'Upgrade: https://github.com/neovim/neovim/blob/master/INSTALL.md\n', 'Normal' },
+  }, true, {})
+  return
+end
+
 local function try_require(mod)
   local ok, err = pcall(require, mod)
   if not ok then
