@@ -19,6 +19,8 @@ for any fail.
 - [ ] Open a .py file — LSP attaches within 2s (`:LspInfo` shows client)
 - [ ] Edit .lua, `:w` — stylua formats automatically (conform.nvim)
 - [ ] `<Space>fh` — telescope harpoon list
+- [ ] (CI-covered, but worth spot-checking locally) `<Space>ff` in a repo with >50 files — telescope sorts by relevance, not alphabet
+- [ ] (CI-covered) harpoon persists marks across nvim restarts if the same cwd is re-opened (v2 stores in `~/.local/share/nvim/harpoon2.json`)
 - [ ] `<Space>ha` on 3 different files — harpoon marks added
 - [ ] `<Space>h1/2/3` — buffer switches to marked files
 - [ ] `<Space>u` — undotree opens
