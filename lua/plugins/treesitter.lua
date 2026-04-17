@@ -23,9 +23,6 @@ return {
   'nvim-treesitter/nvim-treesitter',
   branch = 'main',
   lazy = false, -- install+start eagerly; highlighter is cheap
-  build = function()
-    require('nvim-treesitter').update()
-  end,
   config = function()
     local ts = require('nvim-treesitter')
     ts.install(LANGS)
