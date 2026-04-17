@@ -1,9 +1,12 @@
--- lua/tmux/claude_popup.lua — hidden detached tmux session + popup attach.
--- Single global Claude instance reachable from any nvim via <leader>cp.
--- Conversation persists across popup toggles and nvim restarts.
+-- lua/tmux/claude_popup.lua — per-project detached tmux session + popup attach.
+--
+-- Every independent repo (or worktree) keyed by tmux.project.session_name()
+-- gets its own hidden 'cc:<slug>' tmux session running claude in that
+-- project's cwd. <leader>cp from nvim inside project A attaches to cc:A;
+-- from project B attaches to cc:B. No crosstalk.
 local M = {}
+local project = require('tmux.project')
 
-local SESSION = 'claude-happy'
 local POPUP_W = '85%'
 local POPUP_H = '85%'
 
@@ -11,8 +14,12 @@ local function sys(args)
   return vim.system(args, { text = true }):wait()
 end
 
+local function session()
+  return project.session_name()
+end
+
 function M.exists()
-  return sys({ 'tmux', 'has-session', '-t', SESSION }).code == 0
+  return sys({ 'tmux', 'has-session', '-t', session() }).code == 0
 end
 
 function M.ensure()
@@ -23,9 +30,12 @@ function M.ensure()
   if cwd == '' then
     cwd = vim.fn.getcwd()
   end
-  local res = sys({ 'tmux', 'new-session', '-d', '-s', SESSION, '-c', cwd, 'claude' })
+  local res = sys({ 'tmux', 'new-session', '-d', '-s', session(), '-c', cwd, 'claude' })
   if res.code ~= 0 then
-    vim.notify('failed to spawn claude-happy session: ' .. (res.stderr or ''), vim.log.levels.ERROR)
+    vim.notify(
+      'failed to spawn ' .. session() .. ' session: ' .. (res.stderr or ''),
+      vim.log.levels.ERROR
+    )
     return false
   end
   return true
@@ -48,19 +58,17 @@ function M.open()
     POPUP_W,
     '-h',
     POPUP_H,
-    'tmux attach -t ' .. SESSION,
+    'tmux attach -t ' .. session(),
   })
 end
 
 function M.fresh()
   if M.exists() then
-    sys({ 'tmux', 'kill-session', '-t', SESSION })
+    sys({ 'tmux', 'kill-session', '-t', session() })
   end
   M.open()
 end
 
--- Returns the pane ID of the (single) pane inside claude-happy, or nil.
--- Used by lua/tmux/send.lua when no @claude_pane_id is set.
 function M.pane_id()
   if not M.exists() then
     return nil
@@ -69,7 +77,7 @@ function M.pane_id()
     'tmux',
     'list-panes',
     '-t',
-    SESSION,
+    session(),
     '-F',
     '#{pane_id}',
   })
