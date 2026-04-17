@@ -37,6 +37,9 @@ jobs:
         env:
           HAPPY_NVIM_LOAD_CONFIG: '1'
         run: |
+          # Install repo as the user's nvim config so Lazy can find lua/plugins/
+          mkdir -p "$HOME/.config/nvim"
+          cp -r . "$HOME/.config/nvim/"
           nvim --headless -c 'Lazy! sync' -c 'qa!' 2>&1 | tail -5 || true
           set +e
           nvim --headless -u tests/minimal_init.lua \
