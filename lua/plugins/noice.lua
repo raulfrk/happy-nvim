@@ -13,14 +13,34 @@ return {
         ['vim.lsp.util.stylize_markdown'] = true,
         ['cmp.entry.get_documentation'] = true,
       },
-      signature = { enabled = true }, -- inline LSP signature popups (spec §5.1.5)
+      signature = { enabled = true },
       hover = { enabled = true },
+      -- skip progress messages (LSP spam in notify stack)
+      progress = { enabled = false },
+      message = { enabled = false },
     },
+    -- don't replace cmdline / messages — keep nvim's native UI to
+    -- avoid overlap with lualine + notify popups over mosh+tmux
+    cmdline = { enabled = false },
+    messages = { enabled = false },
+    notify = { enabled = true },
     presets = {
       bottom_search = true,
-      command_palette = true, -- center-screen cmdline popup
+      command_palette = false,
       long_message_to_split = true,
       lsp_doc_border = true,
+    },
+    routes = {
+      -- drop "written", "lines yanked" etc. from floating notify
+      {
+        filter = { event = 'msg_show', any = {
+          { find = '%d+L, %d+B' },
+          { find = '; after #%d+' },
+          { find = '; before #%d+' },
+          { find = '%d+ lines yanked' },
+        } },
+        opts = { skip = true },
+      },
     },
   },
 }
