@@ -38,6 +38,11 @@ function M.ensure()
     )
     return false
   end
+  -- New session is busy by definition (we just spawned claude)
+  local ok_idle, idle = pcall(require, 'tmux.idle')
+  if ok_idle then
+    idle.mark_busy(session())
+  end
   return true
 end
 
@@ -60,6 +65,11 @@ function M.open()
     POPUP_H,
     'tmux attach -t ' .. session(),
   })
+  -- User was just typing in there; treat as busy so badge clears
+  local ok_idle, idle = pcall(require, 'tmux.idle')
+  if ok_idle then
+    idle.mark_busy(session())
+  end
 end
 
 function M.fresh()

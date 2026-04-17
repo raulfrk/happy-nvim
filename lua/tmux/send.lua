@@ -65,6 +65,21 @@ function M.resolve_target()
   return nil, nil
 end
 
+-- Map a pane id to its containing session name (e.g. '%42' -> 'cc-happy-nvim').
+function M._session_of_pane(pane_id)
+  local res = vim
+    .system({ 'tmux', 'display-message', '-p', '-t', pane_id, '#{session_name}' }, { text = true })
+    :wait()
+  if res.code ~= 0 then
+    return nil
+  end
+  local name = (res.stdout or ''):gsub('%s+$', '')
+  if name == '' then
+    return nil
+  end
+  return name
+end
+
 function M.send_to_claude(payload)
   local id = M.resolve_target()
   if not id then
@@ -85,6 +100,15 @@ function M.send_to_claude(payload)
   end
   vim.system(M._build_send_cmd(id, payload)):wait()
   vim.system(M._build_enter_cmd(id)):wait()
+  -- Mark the containing session busy so idle watcher doesn't flip back
+  -- to idle until output actually settles.
+  local ok_idle, idle = pcall(require, 'tmux.idle')
+  if ok_idle then
+    local name = M._session_of_pane(id)
+    if name then
+      idle.mark_busy(name)
+    end
+  end
   return true
 end
 
