@@ -25,6 +25,21 @@ return {
       lazy_cmd('tmux.claude', 'send_errors_guarded'),
       desc = 'Claude: send diagnostics',
     },
+    {
+      '<leader>cp',
+      lazy_cmd('tmux.claude_popup', 'open'),
+      desc = 'Claude: toggle popup (detached session)',
+    },
+    {
+      '<leader>cC',
+      lazy_cmd('tmux.claude', 'open_fresh_guarded'),
+      desc = 'Claude: fresh pane (kill + respawn)',
+    },
+    {
+      '<leader>cP',
+      lazy_cmd('tmux.claude_popup', 'fresh'),
+      desc = 'Claude: fresh popup (kill + respawn)',
+    },
     { '<leader>tg', lazy_cmd('tmux.popup', 'lazygit'), desc = 'tmux popup: lazygit' },
     { '<leader>tt', lazy_cmd('tmux.popup', 'scratch'), desc = 'tmux popup: shell (git root)' },
     { '<leader>tb', lazy_cmd('tmux.popup', 'btop'), desc = 'tmux popup: btop' },

@@ -97,6 +97,20 @@ function M.open_guarded()
     M.open()
   end
 end
+
+function M.open_fresh_guarded()
+  if not guard() then
+    return
+  end
+  -- Kill existing pane if registered for the current nvim window
+  local send = require('tmux.send')
+  local id = send.get_claude_pane_id()
+  if id then
+    vim.system({ 'tmux', 'kill-pane', '-t', id }):wait()
+    vim.system({ 'tmux', 'set-option', '-w', '-u', '@claude_pane_id' }):wait()
+  end
+  M.open()
+end
 function M.send_file_guarded()
   if guard() then
     M.send_file()
