@@ -1,0 +1,20 @@
+# Plugin lockfile
+# lazy-lock.json is COMMITTED — do not ignore.
+
+# Test runner artifacts
+.tests/
+tests/.coverage/
+
+# Neovim state (should never be inside the config repo, but defensive)
+.cache/
+*.swp
+*.swo
+*~
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
