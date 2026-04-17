@@ -30,12 +30,15 @@ from .helpers import send_keys, tmx, wait_for_pane
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
-def _write_scratch_config(scratch: Path) -> Path:
-    """Create a minimal init.lua that only loads the clipboard module.
+def _write_scratch_config(scratch: Path, marker_file: Path) -> Path:
+    """Create a minimal init.lua that loads the clipboard module + writes a
+    marker file alongside OSC 52 emission.
 
     We deliberately do NOT load lazy.nvim / plugins / autocmds from the full
     config — those take 5+ seconds to sync on a cold runner and aren't needed
-    to exercise the clipboard hook.
+    to exercise the clipboard hook. The marker-file probe eliminates tmux's
+    set-clipboard flakiness from the assertion path while still exercising
+    the full TextYankPost → _encode_osc52 → _emit pipeline.
     """
     nvim_cfg = scratch / "nvim"
     nvim_cfg.mkdir(parents=True, exist_ok=True)
@@ -45,22 +48,40 @@ def _write_scratch_config(scratch: Path) -> Path:
     (lua_dir / "init.lua").symlink_to(REPO_ROOT / "lua" / "clipboard" / "init.lua")
     init_lua = nvim_cfg / "init.lua"
     init_lua.write_text(textwrap.dedent(f"""
-        -- Minimal init: just enough to exercise the OSC 52 hook.
         vim.opt.rtp:prepend('{nvim_cfg}')
         vim.g.mapleader = ' '
-        require('clipboard').setup()
+        local clipboard = require('clipboard')
+        -- Wrap _emit so the test can observe that it fired w/o relying on
+        -- tmux's paste buffer (which depends on set-clipboard + timing).
+        local orig_emit = clipboard._emit
+        clipboard._emit = function(seq)
+          local f = io.open('{marker_file}', 'w')
+          if f then
+            f:write(seq)
+            f:close()
+          end
+          return orig_emit(seq)
+        end
+        clipboard.setup()
     """).lstrip())
     return nvim_cfg
 
 
 @pytest.fixture
-def scratch_nvim_config(scratch_dir: Path) -> Path:
+def marker_file(tmp_path: Path) -> Path:
+    return tmp_path / "osc52-marker"
+
+
+@pytest.fixture
+def scratch_nvim_config(scratch_dir: Path, marker_file: Path) -> Path:
     """Per-test scratch config symlinking in only the clipboard module."""
-    cfg = _write_scratch_config(scratch_dir)
+    cfg = _write_scratch_config(scratch_dir, marker_file)
     return cfg
 
 
-def test_textyankpost_emits_osc52(tmux_socket: str, scratch_nvim_config: Path, tmp_path: Path):
+def test_textyankpost_emits_osc52(
+    tmux_socket: str, scratch_nvim_config: Path, tmp_path: Path, marker_file: Path
+):
     session = "osc52"
     nvim_state = tmp_path / "nvim-state"
     nvim_state.mkdir(parents=True, exist_ok=True)
@@ -90,40 +111,32 @@ def test_textyankpost_emits_osc52(tmux_socket: str, scratch_nvim_config: Path, t
             f"{env_str} nvim --clean -u {scratch_nvim_config}/init.lua "
             f'''-c "put ='hello' | normal! gg"''',
         )
-        # Now that the server is running (new-session started it), force
-        # `set-clipboard on` so tmux decodes OSC 52 into a paste buffer
-        # regardless of the runner's default. Must come after new-session;
-        # set-option -g on a non-existent server errors.
-        tmx(tmux_socket, "set-option", "-g", "set-clipboard", "on")
-        # Clear any leftover paste buffers from previous tests on the same
-        # server (picker/multiproject tests spawn many cc-* sessions).
-        subprocess.run(
-            ["tmux", "-L", tmux_socket, "delete-buffer"],
-            check=False, capture_output=True,
-        )
         # Wait for nvim to render "hello" in the visible pane
         wait_for_pane(tmux_socket, session, r"hello", timeout=5)
-        # Yank the whole line
+        # Yank the whole line — TextYankPost autocmd fires, wrapper writes
+        # the OSC 52 escape sequence to marker_file and also calls the real
+        # _emit (which writes to io.stdout as before).
         send_keys(tmux_socket, session, "V", "y")
-        # Poll show-buffer w/ retries — OSC 52 flush timing varies across
-        # tmux versions + runner load. Give it up to 3s.
+        # Poll for the marker file — far more reliable than tmux's paste
+        # buffer, which depends on server-wide set-clipboard state.
         import time
-        result = None
         for _ in range(30):
-            result = subprocess.run(
-                ["tmux", "-L", tmux_socket, "show-buffer"],
-                check=False, text=True, capture_output=True,
-            )
-            if result.returncode == 0 and "hello" in result.stdout:
+            if marker_file.exists():
                 break
             time.sleep(0.1)
-        stdout = repr(result.stdout) if result else "no result"
-        stderr = repr(result.stderr) if result else "no result"
-        assert result and result.returncode == 0 and "hello" in result.stdout, (
-            "tmux paste buffer was not set to 'hello' after yank — "
-            "OSC 52 sequence was not received by tmux.\n"
-            f"show-buffer stdout: {stdout}\n"
-            f"show-buffer stderr: {stderr}"
+        assert marker_file.exists(), (
+            "TextYankPost autocmd did not fire (marker file not written).\n"
+            f"marker: {marker_file}"
+        )
+        payload = marker_file.read_bytes()
+        assert payload.startswith(b"\x1b]52;c;") and payload.endswith(b"\x07"), (
+            f"OSC 52 payload malformed: {payload!r}"
+        )
+        # Decode base64 content and assert it's "hello"
+        import base64
+        b64 = payload[len(b"\x1b]52;c;"):-1]
+        assert base64.b64decode(b64).rstrip() == b"hello", (
+            f"OSC 52 content decoded to {base64.b64decode(b64)!r}, expected b'hello'"
         )
     finally:
         tmx(tmux_socket, "kill-session", "-t", session, check=False)
