@@ -1,0 +1,9 @@
+[selene]
+base = "lua51"
+name = "nvim"
+
+[vim]
+any = true
+
+[jit]
+any = true
