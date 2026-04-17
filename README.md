@@ -133,3 +133,24 @@ recognizable form.
 ## License
 
 MIT — see `LICENSE`.
+
+## Multi-project notifications
+
+Each active Claude session carries a `@claude_idle` tmux option that flips to
+`1` after 2 seconds of stable output and back to `0` when you send input.
+Add this snippet to your `~/.tmux.conf` to show a badge per session in
+your status line:
+
+```tmux
+# ~/.tmux.conf
+set -g status-right "#(bash -c 'for s in $(tmux list-sessions -F \"#{session_name}\" | grep ^cc-); do idle=$(tmux show-option -t \"$s\" -v -q @claude_idle); case \"$idle\" in 1) icon=\"✓\";; 0) icon=\"⟳\";; *) icon=\"?\";; esac; echo -n \" ${s#cc-}$icon\"; done') | %H:%M"
+```
+
+Reload with `tmux source-file ~/.tmux.conf`. Example rendering with two
+open projects:
+
+    happy-nvim✓ other-repo⟳ | 14:32
+
+The `<leader>cl` picker shows the same state inline, so the status-bar
+snippet is optional — useful mainly when you want always-visible state
+without opening the picker.
