@@ -7,7 +7,6 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
-    continue-on-error: true  # advisory until files are formatted locally
     steps:
       - uses: actions/checkout@v4
       - uses: JohnnyMorganz/stylua-action@v4
