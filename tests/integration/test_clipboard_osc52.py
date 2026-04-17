@@ -95,27 +95,33 @@ def test_textyankpost_emits_osc52(tmux_socket: str, scratch_nvim_config: Path, t
         # regardless of the runner's default. Must come after new-session;
         # set-option -g on a non-existent server errors.
         tmx(tmux_socket, "set-option", "-g", "set-clipboard", "on")
+        # Clear any leftover paste buffers from previous tests on the same
+        # server (picker/multiproject tests spawn many cc-* sessions).
+        subprocess.run(
+            ["tmux", "-L", tmux_socket, "delete-buffer"],
+            check=False, capture_output=True,
+        )
         # Wait for nvim to render "hello" in the visible pane
         wait_for_pane(tmux_socket, session, r"hello", timeout=5)
         # Yank the whole line
         send_keys(tmux_socket, session, "V", "y")
-        # Give the autocmd a moment to flush io.stdout
+        # Poll show-buffer w/ retries — OSC 52 flush timing varies across
+        # tmux versions + runner load. Give it up to 3s.
         import time
-        time.sleep(0.3)
-        # tmux intercepts OSC 52 (set-clipboard on by default) and stores the
-        # decoded payload as a paste buffer. show-buffer returns the content of
-        # the most-recently set buffer.
-        result = subprocess.run(
-            ["tmux", "-L", tmux_socket, "show-buffer"],
-            check=False,
-            text=True,
-            capture_output=True,
-        )
-        assert result.returncode == 0 and "hello" in result.stdout, (
+        result = None
+        for _ in range(30):
+            result = subprocess.run(
+                ["tmux", "-L", tmux_socket, "show-buffer"],
+                check=False, text=True, capture_output=True,
+            )
+            if result.returncode == 0 and "hello" in result.stdout:
+                break
+            time.sleep(0.1)
+        assert result and result.returncode == 0 and "hello" in result.stdout, (
             "tmux paste buffer was not set to 'hello' after yank — "
             "OSC 52 sequence was not received by tmux.\n"
-            f"show-buffer stdout: {result.stdout!r}\n"
-            f"show-buffer stderr: {result.stderr!r}"
+            f"show-buffer stdout: {result.stdout!r if result else 'no result'}\n"
+            f"show-buffer stderr: {result.stderr!r if result else 'no result'}"
         )
     finally:
         tmx(tmux_socket, "kill-session", "-t", session, check=False)
