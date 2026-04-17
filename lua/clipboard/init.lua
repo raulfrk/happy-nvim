@@ -18,7 +18,9 @@ function M._encode_osc52(content)
 end
 
 function M._emit(seq)
+  -- selene: allow(incorrect_standard_library_use)
   io.stdout:write(seq)
+  -- selene: allow(incorrect_standard_library_use)
   io.stdout:flush()
 end
 
