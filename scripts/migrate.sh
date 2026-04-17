@@ -33,6 +33,20 @@ Upgrade: https://github.com/neovim/neovim/releases/tag/stable
 Debian/Ubuntu: curl -L https://github.com/neovim/neovim/releases/download/stable/nvim-linux-x86_64.tar.gz -o /tmp/nvim.tar.gz && sudo tar -C /opt -xzf /tmp/nvim.tar.gz && sudo ln -sf /opt/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim"
 fi
 
+# 1b. Preflight — tree-sitter CLI required by nvim-treesitter@main for parser builds
+if ! command -v tree-sitter >/dev/null 2>&1; then
+  log "tree-sitter CLI not found — installing via npm-global"
+  if ! command -v npm >/dev/null 2>&1; then
+    die "npm not found. Install Node.js (includes npm) then re-run: https://nodejs.org/en/download"
+  fi
+  if ! npm install -g tree-sitter-cli 2>/dev/null; then
+    warn "global npm install failed — retrying with sudo"
+    sudo npm install -g tree-sitter-cli || die "npm install -g tree-sitter-cli failed. Install manually: cargo install tree-sitter-cli"
+  fi
+  command -v tree-sitter >/dev/null 2>&1 || die "tree-sitter still not on \$PATH after install. Check npm global prefix: npm config get prefix"
+fi
+log "tree-sitter: $(tree-sitter --version 2>&1 | head -1)"
+
 is_happy_nvim() {
   [[ -f "$1/init.lua" ]] && grep -q 'happy-nvim' "$1/README.md" 2>/dev/null
 }
