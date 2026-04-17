@@ -26,7 +26,6 @@ end
 
 -- Keymaps registered statically in lua/plugins/tmux.lua so which-key
 -- sees them on <leader> before the module is loaded.
-function M.setup()
-end
+function M.setup() end
 
 return M

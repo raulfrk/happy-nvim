@@ -33,12 +33,15 @@ return {
     routes = {
       -- drop "written", "lines yanked" etc. from floating notify
       {
-        filter = { event = 'msg_show', any = {
-          { find = '%d+L, %d+B' },
-          { find = '; after #%d+' },
-          { find = '; before #%d+' },
-          { find = '%d+ lines yanked' },
-        } },
+        filter = {
+          event = 'msg_show',
+          any = {
+            { find = '%d+L, %d+B' },
+            { find = '; after #%d+' },
+            { find = '; before #%d+' },
+            { find = '%d+ lines yanked' },
+          },
+        },
         opts = { skip = true },
       },
     },
