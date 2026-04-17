@@ -40,6 +40,60 @@ return {
       lazy_cmd('tmux.claude_popup', 'fresh'),
       desc = 'Claude: fresh popup (kill + respawn)',
     },
+    {
+      '<leader>cl',
+      lazy_cmd('tmux.picker', 'open'),
+      desc = 'Claude: list + attach sessions',
+    },
+    {
+      '<leader>cn',
+      function()
+        vim.ui.input({ prompt = 'Project slug for new Claude: ' }, function(slug)
+          if not slug or slug == '' then
+            return
+          end
+          local safe = slug:gsub('[^%w%-]', '-'):gsub('%-+', '-')
+          local name = 'cc-' .. safe
+          local cwd = vim.fn.expand('%:p:h')
+          if cwd == '' then
+            cwd = vim.fn.getcwd()
+          end
+          vim.system({ 'tmux', 'new-session', '-d', '-s', name, '-c', cwd, 'claude' }):wait()
+          vim
+            .system({
+              'tmux',
+              'display-popup',
+              '-E',
+              '-w',
+              '85%',
+              '-h',
+              '85%',
+              'tmux attach -t ' .. name,
+            })
+            :wait()
+        end)
+      end,
+      desc = 'Claude: new named session (prompts for slug)',
+    },
+    {
+      '<leader>ck',
+      function()
+        local popup = require('tmux.claude_popup')
+        if not popup.exists() then
+          vim.notify('no Claude session for this project', vim.log.levels.INFO)
+          return
+        end
+        vim.ui.select({ 'Yes, kill it', 'No, cancel' }, {
+          prompt = "Kill current project's Claude session?",
+        }, function(choice)
+          if choice == 'Yes, kill it' then
+            popup.kill()
+            vim.notify('killed ' .. require('tmux.project').session_name(), vim.log.levels.INFO)
+          end
+        end)
+      end,
+      desc = "Claude: kill current project's session",
+    },
     { '<leader>tg', lazy_cmd('tmux.popup', 'lazygit'), desc = 'tmux popup: lazygit' },
     { '<leader>tt', lazy_cmd('tmux.popup', 'scratch'), desc = 'tmux popup: shell (git root)' },
     { '<leader>tb', lazy_cmd('tmux.popup', 'btop'), desc = 'tmux popup: btop' },
