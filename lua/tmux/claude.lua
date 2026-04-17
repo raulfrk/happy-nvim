@@ -79,15 +79,38 @@ function M.send_errors()
   send.send_to_claude(M._build_ce_payload(buf_rel_path(), diags))
 end
 
-function M.setup()
+-- Keymaps registered statically in lua/plugins/tmux.lua so which-key
+-- sees them on <leader> before the module is loaded. Handlers notify
+-- when called outside a tmux session instead of silently no-opping.
+local function guard()
   if vim.env.TMUX == nil or vim.env.TMUX == '' then
-    return -- spec §7.3: module no-ops outside tmux
+    vim.notify('tmux integration requires $TMUX (run nvim inside tmux)', vim.log.levels.WARN)
+    return false
   end
-  local map = vim.keymap.set
-  map('n', '<leader>cc', M.open, { desc = 'open/attach Claude pane' })
-  map('n', '<leader>cf', M.send_file, { desc = 'send file @ref' })
-  map('v', '<leader>cs', M.send_selection, { desc = 'send selection' })
-  map('n', '<leader>ce', M.send_errors, { desc = 'send file + diagnostics' })
+  return true
+end
+
+function M.setup() end
+
+function M.open_guarded()
+  if guard() then
+    M.open()
+  end
+end
+function M.send_file_guarded()
+  if guard() then
+    M.send_file()
+  end
+end
+function M.send_selection_guarded()
+  if guard() then
+    M.send_selection()
+  end
+end
+function M.send_errors_guarded()
+  if guard() then
+    M.send_errors()
+  end
 end
 
 return M

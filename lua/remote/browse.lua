@@ -165,10 +165,6 @@ function M.force_binary()
   vim.notify('binary guard disabled for this buffer; re-open with :e to retry', vim.log.levels.INFO)
 end
 
-function M.setup()
-  vim.keymap.set('n', '<leader>sB', M.browse, { desc = 'browse remote path (scp://)' })
-  vim.keymap.set('n', '<leader>sf', M.find, { desc = 'find remote files' })
-  vim.keymap.set('n', '<leader>sO', M.force_binary, { desc = 'override binary guard' })
-end
+function M.setup() end -- keymaps in lua/plugins/remote.lua
 
 return M

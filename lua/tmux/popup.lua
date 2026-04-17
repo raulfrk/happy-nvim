@@ -24,14 +24,9 @@ function M.btop()
   popup('btop')
 end
 
+-- Keymaps registered statically in lua/plugins/tmux.lua so which-key
+-- sees them on <leader> before the module is loaded.
 function M.setup()
-  if vim.env.TMUX == nil or vim.env.TMUX == '' then
-    return
-  end
-  local map = vim.keymap.set
-  map('n', '<leader>tg', M.lazygit, { desc = 'lazygit popup' })
-  map('n', '<leader>tt', M.scratch, { desc = 'scratch shell popup (git root)' })
-  map('n', '<leader>tb', M.btop, { desc = 'btop popup' })
 end
 
 return M

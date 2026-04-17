@@ -100,30 +100,26 @@ function M.pick()
     :find()
 end
 
-function M.setup()
-  vim.keymap.set('n', '<leader>ss', M.pick, { desc = 'ssh host picker' })
-  vim.api.nvim_create_user_command(
-    'HappyHostsPrune',
-    function() -- prune unresolvable hosts from frecency DB
-      local db = M._read_db()
-      local pruned = 0
-      for host, _ in pairs(db) do
-        local res = vim.system({ 'getent', 'hosts', host }, { text = true }):wait()
-        if res.code ~= 0 then
-          db[host] = nil
-          pruned = pruned + 1
-        end
-      end
-      vim.fn.mkdir(vim.fn.stdpath('data') .. '/happy-nvim', 'p')
-      local f = io.open(DB_PATH, 'w')
-      if f then
-        f:write(vim.json.encode(db))
-        f:close()
-      end
-      vim.notify(string.format('pruned %d unresolvable hosts', pruned))
-    end,
-    {}
-  )
+function M.prune()
+  local db = M._read_db()
+  local pruned = 0
+  for host, _ in pairs(db) do
+    local res = vim.system({ 'getent', 'hosts', host }, { text = true }):wait()
+    if res.code ~= 0 then
+      db[host] = nil
+      pruned = pruned + 1
+    end
+  end
+  vim.fn.mkdir(vim.fn.stdpath('data') .. '/happy-nvim', 'p')
+  local f = io.open(DB_PATH, 'w')
+  if f then
+    f:write(vim.json.encode(db))
+    f:close()
+  end
+  vim.notify(string.format('pruned %d unresolvable hosts', pruned))
 end
+
+-- Keymaps + :HappyHostsPrune registered statically in lua/plugins/remote.lua.
+function M.setup() end
 
 return M

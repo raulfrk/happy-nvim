@@ -112,11 +112,6 @@ function M.refresh(host)
   vim.notify(string.format('cached %d dirs for %s', #fresh, host))
 end
 
-function M.setup()
-  vim.keymap.set('n', '<leader>sd', M.pick, { desc = 'remote dir picker' })
-  vim.keymap.set('n', '<leader>sD', function()
-    M.refresh()
-  end, { desc = 'refresh remote dirs' })
-end
+function M.setup() end -- keymaps in lua/plugins/remote.lua
 
 return M

@@ -131,8 +131,6 @@ function M.prompt()
     :find()
 end
 
-function M.setup()
-  vim.keymap.set('n', '<leader>sg', M.prompt, { desc = 'remote grep' })
-end
+function M.setup() end -- keymaps in lua/plugins/remote.lua
 
 return M

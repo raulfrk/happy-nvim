@@ -11,15 +11,15 @@ return {
     })
 
     wk.add({
-      { '<leader>f', group = 'find / files (telescope)' },
-      { '<leader>g', group = 'git' },
-      { '<leader>l', group = 'LSP' },
-      { '<leader>d', group = 'diagnostics' },
-      { '<leader>h', group = 'harpoon' },
-      { '<leader>s', group = 'ssh / remote' },
-      { '<leader>c', group = 'Claude (tmux)' },
-      { '<leader>t', group = 'tmux popups' },
-      { '<leader>?', group = 'cheatsheet / coach' },
+      { '<leader>f', group = 'find / files (telescope)', icon = '' },
+      { '<leader>g', group = 'git', icon = '' },
+      { '<leader>l', group = 'LSP', icon = '' },
+      { '<leader>d', group = 'diagnostics', icon = '' },
+      { '<leader>h', group = 'harpoon', icon = '󰛢' },
+      { '<leader>s', group = 'ssh / remote files', icon = '󰢹' },
+      { '<leader>c', group = 'Claude (tmux pane)', icon = '󰚩' },
+      { '<leader>t', group = 'tmux popups', icon = '' },
+      { '<leader>?', group = 'cheatsheet / coach', icon = '󰋖' },
     })
 
     -- Visual-mode text-object hints (spec §5.1.5)
