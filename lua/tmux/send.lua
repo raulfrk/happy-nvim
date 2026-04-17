@@ -46,10 +46,32 @@ function M.set_claude_pane_id(id)
   vim.system({ 'tmux', 'set-option', '-w', '@claude_pane_id', id }):wait()
 end
 
-function M.send_to_claude(payload)
+-- Resolve which Claude surface should receive sends. Priority:
+-- 1. @claude_pane_id on the current nvim window (set by <leader>cc)
+-- 2. claude-happy tmux session's pane (set by <leader>cp)
+-- 3. nil — caller should notify the user
+function M.resolve_target()
   local id = M.get_claude_pane_id()
+  if id then
+    return id, 'pane'
+  end
+  local ok, popup = pcall(require, 'tmux.claude_popup')
+  if ok then
+    local pid = popup.pane_id()
+    if pid then
+      return pid, 'popup'
+    end
+  end
+  return nil, nil
+end
+
+function M.send_to_claude(payload)
+  local id = M.resolve_target()
   if not id then
-    vim.notify('No Claude pane registered. Press <leader>cc first.', vim.log.levels.WARN)
+    vim.notify(
+      'No Claude surface open. Press <leader>cc (pane) or <leader>cp (popup) first.',
+      vim.log.levels.WARN
+    )
     return false
   end
   if #payload > 10 * 1024 then
