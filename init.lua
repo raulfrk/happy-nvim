@@ -39,6 +39,14 @@ local function setup_happy_modules()
       end
     end
   end
+  -- Idle watcher polls cc-* tmux sessions for output-stable; only useful
+  -- when nvim is inside tmux.
+  if vim.env.TMUX and vim.env.TMUX ~= '' then
+    local ok, idle = pcall(require, 'tmux.idle')
+    if ok then
+      idle.watch_all()
+    end
+  end
 end
 
 if vim.v.vim_did_enter == 1 then
