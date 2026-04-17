@@ -75,7 +75,7 @@ end
 
 function M.session_name(id)
   id = id or M.current()
-  return 'cc:' .. id
+  return 'cc-' .. id
 end
 
 return M
