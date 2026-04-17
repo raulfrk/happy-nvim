@@ -19,8 +19,13 @@ return {
       dashboard.button('r', '  Recent', '<cmd>Telescope oldfiles<CR>'),
       dashboard.button('q', '  Quit', '<cmd>qa<CR>'),
     }
-    -- Tip-of-day footer wired in Task 31
-    dashboard.section.footer.val = ''
+    local ok, coach = pcall(require, 'coach')
+    if ok then
+      local t = coach.random_tip()
+      if t then
+        dashboard.section.footer.val = string.format('Tip: %s — %s (%s)', t.keys, t.desc, t.category)
+      end
+    end
     require('alpha').setup(dashboard.config)
   end,
 }
