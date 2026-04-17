@@ -17,6 +17,31 @@ local function rel_age(ts)
   return math.floor(secs / 86400) .. 'd ago'
 end
 
+local function read_idle(session_name)
+  local res = vim
+    .system({
+      'tmux',
+      'show-option',
+      '-t',
+      session_name,
+      '-v',
+      '-q',
+      '@claude_idle',
+    }, { text = true })
+    :wait()
+  if res.code ~= 0 then
+    return nil
+  end
+  local val = (res.stdout or ''):gsub('%s+$', '')
+  if val == '1' then
+    return 'idle'
+  end
+  if val == '0' then
+    return 'busy'
+  end
+  return nil
+end
+
 function M.open()
   local ok, pickers = pcall(require, 'telescope.pickers')
   if not ok then
@@ -44,9 +69,11 @@ function M.open()
       finder = finders.new_table({
         results = sessions,
         entry_maker = function(s)
+          local state = read_idle(s.name)
+          local icon = (state == 'idle' and '✓') or (state == 'busy' and '⟳') or '?'
           return {
             value = s,
-            display = string.format('%-30s  (%s)', s.slug, rel_age(s.created_ts)),
+            display = string.format('%s %-28s  (%s)', icon, s.slug, rel_age(s.created_ts)),
             ordinal = s.slug,
           }
         end,
