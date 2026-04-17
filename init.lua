@@ -13,3 +13,13 @@ try_require('config.keymaps')
 try_require('config.autocmds')
 try_require('config.colors')
 try_require('config.lazy')
+
+-- Modules load after lazy so they can use telescope etc.
+vim.api.nvim_create_autocmd('User', {
+  pattern = 'LazyDone',
+  once = true,
+  callback = function()
+    local ok, coach = pcall(require, 'coach')
+    if ok then coach.setup() end
+  end,
+})
