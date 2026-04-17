@@ -18,3 +18,8 @@ tests/.coverage/
 # OS
 .DS_Store
 Thumbs.db
+
+# Smoke test artifacts
+startup.log
+startup2.log
+.nvimlog
