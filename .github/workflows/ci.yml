@@ -1,0 +1,58 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: JohnnyMorganz/stylua-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          version: latest
+          args: --check .
+      - uses: NTBBloodbath/selene-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          version: latest
+          args: .
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        nvim: [stable, nightly]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: ${{ matrix.nvim }}
+      - name: Run plenary tests
+        run: |
+          nvim --headless -u tests/minimal_init.lua \
+            -c "PlenaryBustedDirectory tests/ {minimal_init='tests/minimal_init.lua'}" \
+            -c 'qa!' 2>&1 | tee test.log
+          grep -q 'Failed: 0' test.log
+          grep -q 'Errors: 0' test.log
+
+  startup:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        nvim: [stable, nightly]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: ${{ matrix.nvim }}
+      - name: Headless startup smoke
+        run: |
+          mkdir -p $HOME/.config/nvim
+          cp -r . $HOME/.config/nvim/
+          nvim --headless -c 'qa!' 2>&1 | tee startup.log
+          ! grep -Ei 'Error|E[0-9]+:' startup.log
