@@ -19,6 +19,25 @@ set -uo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
+# Single shared scratch dir for all layers. Bootstraps Lazy + plugins ONCE.
+# Subsequent layers reuse the same data dir (no re-clone, no TS rebuild).
+# This is the big win over per-layer tmpdirs (saves ~10 min on CI matrix).
+ASSESS_SCRATCH="$(mktemp -d -t happy-assess.XXXXXX)"
+export XDG_CONFIG_HOME="$ASSESS_SCRATCH/cfg"
+export XDG_DATA_HOME="$ASSESS_SCRATCH/data"
+export XDG_CACHE_HOME="$ASSESS_SCRATCH/cache"
+export XDG_STATE_HOME="$ASSESS_SCRATCH/state"
+mkdir -p "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_CACHE_HOME" "$XDG_STATE_HOME"
+# Install repo as the config so Lazy finds lua/plugins/ via stdpath('config')
+mkdir -p "$XDG_CONFIG_HOME/nvim"
+cp -r . "$XDG_CONFIG_HOME/nvim/"
+trap "rm -rf '$ASSESS_SCRATCH'" EXIT
+
+# One-shot Lazy sync + TS build. Every subsequent nvim invocation below
+# inherits these XDG dirs and hits the cache.
+echo '=== bootstrap: Lazy! sync (once) ==='
+nvim --headless -c 'Lazy! sync' -c 'qa!' 2>&1 | tail -5 || true
+
 declare -A LAYER_STATUS
 declare -A LAYER_DURATION
 declare -a LAYER_ORDER
@@ -60,49 +79,33 @@ layer_python_syntax() {
   return $rc
 }
 
-# Layer 3: init.lua bootstrap
+# Layer 3: init.lua bootstrap — reuses the shared XDG dirs
 layer_init_bootstrap() {
-  local tmp
-  tmp=$(mktemp -d -t happy-assess.XXXXXX)
-  trap "rm -rf '$tmp'" RETURN
-  XDG_DATA_HOME="$tmp/data" XDG_CONFIG_HOME="$tmp/cfg" \
-    XDG_CACHE_HOME="$tmp/cache" XDG_STATE_HOME="$tmp/state" \
-    nvim --headless -c 'qa!' 2>&1 | tee "$tmp/startup.log"
-  ! grep -Eiq 'E[0-9]+:' "$tmp/startup.log"
+  nvim --headless -c 'qa!' 2>&1 | tee "$ASSESS_SCRATCH/startup.log"
+  ! grep -Eiq 'E[0-9]+:' "$ASSESS_SCRATCH/startup.log"
 }
 
-# Layer 4: plenary unit+smoke
+# Layer 4: plenary unit+smoke — reuses shared XDG dirs (no Lazy re-sync)
 layer_plenary() {
-  local tmp
-  tmp=$(mktemp -d -t happy-assess-plenary.XXXXXX)
-  trap "rm -rf '$tmp'" RETURN
-  XDG_DATA_HOME="$tmp/data" XDG_CONFIG_HOME="$tmp/cfg" \
-    XDG_CACHE_HOME="$tmp/cache" XDG_STATE_HOME="$tmp/state" \
-    nvim --headless -c 'Lazy! sync' -c 'qa!' 2>&1 | tail -3 || true
   HAPPY_NVIM_LOAD_CONFIG=1 \
-    XDG_DATA_HOME="$tmp/data" XDG_CONFIG_HOME="$tmp/cfg" \
-    XDG_CACHE_HOME="$tmp/cache" XDG_STATE_HOME="$tmp/state" \
     nvim --headless -u tests/minimal_init.lua \
       -c "PlenaryBustedDirectory tests/ {minimal_init='tests/minimal_init.lua'}" \
-      2>&1 | sed -r 's/\x1b\[[0-9;]*m//g' | tee "$tmp/plenary.log"
-  grep -q 'Success:' "$tmp/plenary.log" || return 1
-  ! grep -qE 'Failed *: *[1-9]|Errors *: *[1-9]' "$tmp/plenary.log"
+      2>&1 | sed -r 's/\x1b\[[0-9;]*m//g' | tee "$ASSESS_SCRATCH/plenary.log"
+  grep -q 'Success:' "$ASSESS_SCRATCH/plenary.log" || return 1
+  ! grep -qE 'Failed *: *[1-9]|Errors *: *[1-9]' "$ASSESS_SCRATCH/plenary.log"
 }
 
 # Layer 5: pytest integration (delegates to existing wrapper)
+# Note: test-integration.sh sets its OWN XDG redirects, which is intentional
+# — it runs a tmux server on an isolated socket w/ fake-claude on PATH.
 layer_integration() {
   bash scripts/test-integration.sh
 }
 
-# Layer 6: :checkhealth
+# Layer 6: :checkhealth — reuses shared XDG dirs
 layer_checkhealth() {
-  local tmp
-  tmp=$(mktemp -d -t happy-assess-health.XXXXXX)
-  trap "rm -rf '$tmp'" RETURN
-  XDG_DATA_HOME="$tmp/data" XDG_CONFIG_HOME="$tmp/cfg" \
-    XDG_CACHE_HOME="$tmp/cache" XDG_STATE_HOME="$tmp/state" \
-    nvim --headless -c 'checkhealth happy-nvim' -c 'qa!' 2>&1 | tee "$tmp/health.log"
-  ! grep -Eiq '^\s*ERROR\b' "$tmp/health.log"
+  nvim --headless -c 'checkhealth happy-nvim' -c 'qa!' 2>&1 | tee "$ASSESS_SCRATCH/health.log"
+  ! grep -Eiq '^\s*ERROR\b' "$ASSESS_SCRATCH/health.log"
 }
 
 run_layer 'shell-syntax'      layer_shell_syntax
