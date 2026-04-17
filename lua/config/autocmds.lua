@@ -25,7 +25,10 @@ local cc_map = {
 vim.api.nvim_create_autocmd('FileType', {
   group = aug,
   callback = function(ev)
-    vim.bo[ev.buf].colorcolumn = cc_map[ev.match] or ''
+    if vim.bo[ev.buf].buftype ~= '' then
+      return
+    end
+    vim.opt_local.colorcolumn = cc_map[ev.match] or ''
   end,
 })
 
