@@ -18,3 +18,13 @@ vim.opt.rtp:prepend(vim.fn.getcwd())
 vim.cmd('runtime plugin/plenary.vim')
 
 require('plenary.busted')
+
+-- For keymap_spec.lua: load the real user config so registrations happen.
+-- Guard with HAPPY_NVIM_LOAD_CONFIG so other specs stay minimal.
+if vim.env.HAPPY_NVIM_LOAD_CONFIG == '1' then
+  -- Point XDG_CONFIG_HOME at the repo root; nvim will pick up init.lua.
+  -- CI + local callers must export HAPPY_NVIM_LOAD_CONFIG=1 and set
+  -- XDG_CONFIG_HOME to a scratch dir that contains the repo as ./nvim.
+  dofile(vim.fn.getcwd() .. '/init.lua')
+  vim.api.nvim_exec_autocmds('VimEnter', {})
+end

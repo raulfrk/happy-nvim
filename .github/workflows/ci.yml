@@ -31,17 +31,17 @@ jobs:
           neovim: true
           version: ${{ matrix.nvim }}
       - name: Run plenary tests
+        env:
+          HAPPY_NVIM_LOAD_CONFIG: '1'
         run: |
+          nvim --headless -c 'Lazy! sync' -c 'qa!' 2>&1 | tail -5 || true
           set +e
           nvim --headless -u tests/minimal_init.lua \
             -c "PlenaryBustedDirectory tests/ {minimal_init='tests/minimal_init.lua'}" \
             2>&1 | tee test.log
           set -e
-          # Strip ANSI codes for reliable grepping
           sed -r 's/\x1b\[[0-9;]*m//g' test.log > test.clean.log
-          # At least one spec must have run
           grep -q 'Success:' test.clean.log
-          # No spec may have failed or errored
           if grep -qE 'Failed *: *[1-9]|Errors *: *[1-9]' test.clean.log; then
             echo 'Test failure/error detected'
             grep -E 'Failed|Errors' test.clean.log
