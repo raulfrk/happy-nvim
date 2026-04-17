@@ -5,9 +5,9 @@ return {
     branch = 'master', -- v1.0 (main) removed nvim-treesitter.configs API
     event = { 'BufReadPre', 'BufNewFile' },
     build = ':TSUpdate',
-    dependencies = {
-      { 'nvim-treesitter/nvim-treesitter-textobjects', branch = 'master' },
-    },
+    -- textobjects disabled until they fix the nvim 0.11 range() nil crash
+    -- (Re-add once upstream tags a compatible release.)
+    dependencies = {},
     config = function()
       require('nvim-treesitter.configs').setup({
         ensure_installed = {
@@ -28,26 +28,6 @@ return {
         },
         highlight = { enable = true },
         indent = { enable = true },
-        textobjects = {
-          select = {
-            enable = true,
-            lookahead = true,
-            keymaps = {
-              ['af'] = '@function.outer',
-              ['if'] = '@function.inner',
-              ['ac'] = '@class.outer',
-              ['ic'] = '@class.inner',
-              ['ap'] = '@parameter.outer',
-              ['ip'] = '@parameter.inner',
-            },
-          },
-          move = {
-            enable = true,
-            set_jumps = true,
-            goto_next_start = { [']f'] = '@function.outer' },
-            goto_previous_start = { ['[f'] = '@function.outer' },
-          },
-        },
       })
     end,
   },
