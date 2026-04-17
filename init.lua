@@ -28,25 +28,24 @@ try_require('config.colors')
 try_require('config.lazy')
 
 -- Modules load after lazy so they can use telescope etc.
-vim.api.nvim_create_autocmd('User', {
-  pattern = 'LazyDone',
-  once = true,
-  callback = function()
-    local ok, coach = pcall(require, 'coach')
-    if ok then
-      coach.setup()
+-- VimEnter fires reliably after lazy bootstraps; LazyDone race-prone.
+local function setup_happy_modules()
+  for _, mod in ipairs({ 'coach', 'clipboard', 'tmux', 'remote' }) do
+    local ok, m = pcall(require, mod)
+    if ok and type(m.setup) == 'function' then
+      local ok_setup, err = pcall(m.setup)
+      if not ok_setup then
+        vim.notify('happy-nvim: ' .. mod .. '.setup failed: ' .. err, vim.log.levels.WARN)
+      end
     end
-    local ok_c, clipboard = pcall(require, 'clipboard')
-    if ok_c then
-      clipboard.setup()
-    end
-    local ok_t, tmux = pcall(require, 'tmux')
-    if ok_t then
-      tmux.setup()
-    end
-    local ok_r, remote = pcall(require, 'remote')
-    if ok_r then
-      remote.setup()
-    end
-  end,
-})
+  end
+end
+
+if vim.v.vim_did_enter == 1 then
+  setup_happy_modules()
+else
+  vim.api.nvim_create_autocmd('VimEnter', {
+    once = true,
+    callback = setup_happy_modules,
+  })
+end
