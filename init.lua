@@ -21,5 +21,7 @@ vim.api.nvim_create_autocmd('User', {
   callback = function()
     local ok, coach = pcall(require, 'coach')
     if ok then coach.setup() end
+    local ok_c, clipboard = pcall(require, 'clipboard')
+    if ok_c then clipboard.setup() end
   end,
 })
