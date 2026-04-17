@@ -69,6 +69,18 @@ function M.fresh()
   M.open()
 end
 
+-- Kill a session by name (defaults to current project's). Returns true on
+-- success or if the session already didn't exist.
+function M.kill(name)
+  name = name or session()
+  local res = sys({ 'tmux', 'has-session', '-t', name })
+  if res.code ~= 0 then
+    return true -- already gone
+  end
+  local r = sys({ 'tmux', 'kill-session', '-t', name })
+  return r.code == 0
+end
+
 function M.pane_id()
   if not M.exists() then
     return nil
