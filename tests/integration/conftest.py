@@ -27,9 +27,14 @@ MIN_TMUX_MAJOR, MIN_TMUX_MINOR = 3, 2
 
 def _tmux_version() -> tuple[int, int]:
     out = subprocess.check_output(["tmux", "-V"], text=True).strip()
-    # "tmux 3.4" or "tmux next-3.4"
-    parts = out.split()[-1].lstrip("next-").split(".")
-    return int(parts[0]), int(parts[1])
+    # "tmux 3.4" or "tmux next-3.4" or "tmux 3.3a"
+    ver = out.split()[-1].lstrip("next-")
+    parts = ver.split(".")
+    major = int(parts[0])
+    # strip any trailing non-numeric suffix (e.g. "3a" -> 3)
+    import re as _re
+    minor = int(_re.match(r"\d+", parts[1]).group())
+    return major, minor
 
 
 @pytest.fixture(scope="session")
