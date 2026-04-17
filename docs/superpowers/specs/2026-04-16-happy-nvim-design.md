@@ -41,12 +41,38 @@ modular setup that:
 
 ### Out of scope (v1)
 
-- File-tree plugins (`nvim-tree`, `neo-tree`, `oil.nvim`) — use netrw +
-  telescope.
-- Auto-pairs, auto-tag, indent-blankline — add only if missed.
+- **File-tree plugins.** Brief differences so the exclusion is intentional,
+  not accidental:
+  - `netrw` — built-in; `:Ex` or `:e dir/` lists files; minimal, no
+    persistent sidebar.
+  - `nvim-tree` — dedicated persistent sidebar tree with icons and git
+    status.
+  - `neo-tree` — more modular than nvim-tree; supports multiple sources
+    (filesystem, buffers, git changes) in one panel.
+  - `oil.nvim` — renders a directory as an editable buffer; rename / move /
+    delete files by editing the text. Novel paradigm.
+
+  **Chosen: netrw + telescope.** Telescope handles fuzzy file-open (the
+  dominant case); netrw covers ad-hoc directory poking. No persistent
+  sidebar means no cognitive tax of "where is my tree focused right now."
+
+- **Auto-pairs, auto-tag, indent-blankline** — brief definitions:
+  - `windwp/nvim-autopairs` — when you type `(`, `[`, `"`, auto-inserts
+    the closing char and leaves cursor between.
+  - `windwp/nvim-ts-autotag` — HTML / JSX / XML tag auto-close; typing
+    `<div>` inserts `</div>` automatically.
+  - `lukas-reineke/indent-blankline.nvim` — vertical guide lines at each
+    indent level.
+
+  Rationale for skipping: each adds typing surprises while the author is
+  still building motion fluency. Easy to add post-v1 if missed.
+
 - Distant.nvim or any remote-editing daemon — violates no-install constraint.
 - rsync-based remote caches — rejected to avoid bulk file copy.
-- Full CI matrix for multiple nvim versions — stable + nightly only.
+- **Full CI matrix for multiple nvim versions** — stable + nightly only.
+  Reason: most users run stable or nightly; a versioned matrix (0.9, 0.10,
+  0.11 …) multiplies CI minutes for marginal coverage gain. Add versions
+  later if a specific regression justifies it.
 - Gamified stats/keystroke tracking — out of "passive nudge" scope.
 
 ## 3. Architecture
@@ -152,6 +178,8 @@ chosen to balance stability with currency.
 | `goolord/alpha-nvim` | Dashboard w/ tip-of-day | `*` |
 | `folke/which-key.nvim` | Leader-hold popup | `v3.x` |
 | `rcarriga/nvim-notify` | Notification backend | `*` |
+| `folke/noice.nvim` | Rich cmdline popup, inline LSP signatures, routed messages | `*` |
+| `MunifTanjim/nui.nvim` | UI component library (noice dep) | `*` |
 
 ### Navigation / files
 
@@ -190,6 +218,7 @@ chosen to balance stability with currency.
 | Plugin | Purpose | Pin |
 |---|---|---|
 | `m4xshen/hardtime.nvim` | Blocks repeated `hjkl` / arrows | `*` |
+| `tris203/precognition.nvim` | Overlays motion-target letters on current line (w/b/e/$/^/f/t) for live discovery | `*` |
 | `tpope/vim-surround` | `cs"'`, `ds(` | `*` |
 | `tpope/vim-repeat` | Makes `.` work w/ plugin actions | `*` |
 
@@ -201,11 +230,23 @@ chosen to balance stability with currency.
 - **`null-ls` / `none-ls`** — replaced by `conform.nvim` + `nvim-lint`.
 - **File-tree plugins** — netrw + telescope cover the use case.
 
-**Total external plugins: 22.**
+**Total external plugins: 25.**
 
 ## 5. Modules (author-owned Lua)
 
 ### 5.1 `coach/` — macro-nudge layer
+
+The nudge layer presents **five surfaces**, layered from least to most
+obtrusive:
+
+1. **Ambient overlay** (always on) — precognition.nvim motion hints on the
+   current line; noice.nvim cmdline + LSP signature popups.
+2. **which-key popup** — after `<leader>`, operator keys (`d`, `c`, `y`), or
+   `v` in visual mode.
+3. **Startup tip-of-day** — one tip on the alpha dashboard per launch.
+4. **On-demand cheatsheet** — telescope picker over `coach/tips.lua`,
+   bound to `<leader>?`.
+5. **Friction** — hardtime.nvim blocks repeated `hjkl` / arrow spam.
 
 **`coach/tips.lua`** — a single Lua table, ordered by whenever the author
 learned or rediscovered a motion. Each entry:
@@ -226,6 +267,39 @@ Categories: `text-objects`, `macros`, `marks`, `registers`, `motions`,
 
 **Why telescope:** it's already a dependency, already has fuzzy matching and a
 preview pane. No new plugin.
+
+#### 5.1.5 Ambient hints (surface 1)
+
+Render-as-you-work hints inspired by LazyVim-on-omarchy. Three components:
+
+- **`tris203/precognition.nvim`** — overlays motion-target letters in the
+  current line's virtual column space: `w` / `W` (next word), `b` / `B`
+  (prev word), `e` (end of word), `$` (end of line), `^` (first non-blank),
+  `f<char>` / `t<char>` on likely jump targets. Updates live as the cursor
+  moves. Lets the author learn motions by *seeing where keys would land*
+  before pressing them.
+
+- **`folke/noice.nvim`** — replaces nvim's monochrome cmdline with a
+  center-screen popup; shows inline LSP signature help while typing function
+  args; routes `:messages` into the notification stack so nothing scrolls
+  off. Makes LSP + cmdline discoverable visually instead of by recall.
+
+- **which-key v3 beyond `<leader>`** — which-key is already configured to
+  pop on leader hold. v3 also triggers after operator keys (`d`, `c`, `y`,
+  `!`, `=`, `<`, `>`) and in visual mode (`v`), listing pending motions /
+  text objects. Register a visual-mode group in `lua/plugins/whichkey.lua`
+  enumerating common text objects (`iw`, `aw`, `ip`, `ap`, `it`, `at`,
+  `i"`, `i'`, `i(`, `i[`, `i{`) with human-readable descriptions, so
+  pressing `v` then pausing reveals the menu of possible selections.
+
+Configuration guardrails:
+
+- precognition hints toggle with `<leader>?p` (for when the overlay is
+  distracting during typing-heavy work).
+- noice defaults to "conservative" preset — cmdline popup + signatures,
+  but messages still reach `:messages` natively.
+- which-key operator/visual triggers have a 400 ms delay so muscle-memory
+  sequences are not interrupted.
 
 ### 5.2 `clipboard/` — OSC 52 hook
 
@@ -264,7 +338,19 @@ user-options (`@claude_pane_id` etc.).
 
 **`tmux/claude.lua`** — Claude Code integration.
 
-Pane discovery is **window-scoped**, not session-scoped:
+Pane discovery is **window-scoped**, not session-scoped.
+
+Pane discovery runs on every `<leader>cc`. If the current tmux window
+has a `@claude_pane_id` user-option pointing at a still-live pane, the
+command just focuses it (reattach). If the option is missing, stale, or
+points at a pane that no longer exists, it splits a new pane horizontally
+in the current buffer's cwd, starts `claude` inside, captures the new
+pane's id, and stores that id on the tmux window. Subsequent `<leader>c*`
+commands read the same option to target their sends. Scope is per-window,
+so multiple tmux windows can each have their own Claude pane without
+interfering with each other.
+
+Pseudocode:
 
 ```
 <leader>cc:
@@ -344,11 +430,29 @@ Thin layer over netrw's built-in `scp://`:
 - `<leader>sf` — prompts `host` + `path` + `name-pattern`, runs
   `ssh <host> 'find <path> -name "<pattern>"'`, displays in telescope;
   Enter opens the selected path via scp://.
-- **Binary guard.** On opening a scp:// buffer, inspect extension and size.
-  Extensions in
-  `{png, jpg, gif, pdf, zip, tar, gz, xz, exe, so, o, a, bin, mp4, mov}` or
-  size > 5 MB triggers refusal with a hint: use `:!scp` manually, or press
-  `<leader>sO` to force open (sets a per-buffer override flag).
+- **Binary guard.** Extension-based heuristics miss extensionless binaries
+  (stripped ELF, `core`, random dumps) and mis-flag extensionless text
+  (shell scripts, READMEs). The guard is content-based, run over SSH
+  **before** scp fetches anything to the local buffer:
+
+  1. **Fast-path extension check.** Extension in
+     `{png, jpg, gif, pdf, zip, tar, gz, xz, exe, so, o, a, bin, mp4,
+      mov, woff, woff2, ttf, ico, jar, class}` → refuse immediately, no
+     SSH call needed. Advisory only — it just saves a round-trip for
+     obvious cases.
+  2. **Authoritative MIME probe.** Otherwise, shell out to
+     `ssh <host> "file -b --mime-encoding <path>"` (POSIX `file(1)`,
+     ubiquitous). Returns `utf-8`, `us-ascii`, `iso-8859-1`, `binary`,
+     `unknown-8bit`, etc. Anything literally `binary` → refuse. ~20 bytes
+     over the wire. Authoritative — beats extension in both directions.
+  3. **Size check.** `ssh <host> "stat -c %s <path>"` (fallback
+     `wc -c < <path>` for BSD stat). > 5 MB → refuse (default, configurable
+     per-call via `+size=`).
+
+  Refusal shows a float: `"binary (or >5MB): use :!scp host:path /tmp/
+  manually, or <leader>sO to force."` Override `<leader>sO` sets
+  `happy_force_binary=1` on the buffer, skipping all three checks on
+  re-open. Resets when buffer closes.
 
 #### 5.4.4 `remote/grep.lua` — remote content grep
 
@@ -359,24 +463,51 @@ Command template:
 
 ```sh
 ssh <host> "nice -n19 ionice -c3 timeout 30 \
-    find <path> -type f -size -1M \
+    find <path> -type f -size -10M \
     -not -path '*/.*' \
     -not -path '*/node_modules/*' \
     -not -path '*/venv/*' \
     -name '<glob>' \
-    -exec grep -IlH '<pattern>' {} + 2>/dev/null"
+    -exec grep -EIlH '<pattern>' {} + 2>/dev/null"
 ```
 
 Defaults baked in:
 
-- `nice -n19 ionice -c3` — low CPU/IO priority, cannot starve other remote processes.
-- `timeout 30` — aborts runaway searches.
-- `-size -1M` — skips large files (logs, binaries).
-- Skip hidden dirs, `node_modules`, `venv`.
-- `grep -I` — skips binary files silently.
+- **`nice -n19`** — POSIX niceness scheduler hint. Range −20 (highest
+  priority) to 19 (lowest). At 19 the Linux scheduler only awards CPU to
+  this process when nothing else wants it. Means the remote grep cannot
+  slow down interactive shells, web servers, DB queries running on the
+  host — it runs in the gaps.
+- **`ionice -c3`** — Linux IO scheduler class 3 = "idle". Same principle
+  as `nice` but for disk I/O: the grep reads files only when no other
+  process is reading from disk. Combined with `nice`, the remote grep is
+  effectively invisible load.
+- **`timeout 30`** — aborts runaway searches at 30 s (override via
+  `+timeout=`). Exit code 124 surfaces as a friendly float.
+- **`-size -10M`** — skips very large files (default 10 MB). Admits most
+  log files while still excluding pathological cases (DB dumps, binaries
+  without extensions). Override per-call with `+size=50M`; `+size=0`
+  disables the cap entirely.
+- **Skip hidden dirs**, `node_modules`, `venv` — common noise. Override
+  with `+hidden` (include hidden) or `+all` (include all).
+- **`grep -E`** — ERE (extended regex). `|` alternation, `+`, `?`, `()`
+  work without escapes — matches most people's expectation of "regex."
+- **`grep -I`** — silently skips any file grep detects as binary (by
+  inspecting the first few KB). Belt-and-suspenders with the binary guard
+  in §5.4.3.
 
-All overridable per call via a prompt flag:
-`<leader>sg` prompt accepts e.g. `pattern=foo path=/etc glob=*.conf +timeout=60 +size=10M +hidden`.
+Per-call override flags accepted by the `<leader>sg` prompt (e.g.
+`pattern=foo path=/etc glob=*.conf +timeout=60 +size=50M +hidden`):
+
+| Flag | Effect |
+|---|---|
+| `+timeout=N` | Change remote `timeout` seconds. |
+| `+size=N[KMG]` | Change `-size` cap. `+size=0` removes cap entirely. |
+| `+hidden` | Remove `-not -path '*/.*'` filter. |
+| `+all` | Also remove `node_modules` / `venv` filters. |
+| `+regex=perl` | Switch `-E` → `-P` (PCRE: lookbehind / lookahead, non-greedy). Requires GNU grep on remote. Falls back to `-E` with a warning if `-P` not supported. |
+| `+regex=fixed` | Switch `-E` → `-F` (literal string search, no regex). Useful when the pattern contains regex meta-chars. |
+| `+nocase` | Add `-i` (case-insensitive). |
 
 Enter on a result opens the matched file via `scp://` at the matching line.
 
