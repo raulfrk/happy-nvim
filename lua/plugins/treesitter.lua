@@ -1,4 +1,8 @@
 -- lua/plugins/treesitter.lua
+-- Keep the plugin for :TSInstall (parsers are used by some plugins like
+-- noice for markdown rendering) but DISABLE highlight. Master branch is
+-- stale and crashes on nvim 0.11 core ("attempt to call method 'range' on
+-- nil"). Fallback: vim's builtin regex syntax highlighting.
 return {
   {
     'nvim-treesitter/nvim-treesitter',
@@ -22,15 +26,8 @@ return {
           'json',
           'toml',
         },
-        highlight = {
-          enable = true,
-          -- Markdown injection crashes on nvim 0.11 treesitter core
-          -- ("attempt to call method 'range' on nil"). Disable until
-          -- nvim-treesitter tags a 0.11-compatible release.
-          disable = { 'markdown', 'markdown_inline' },
-          additional_vim_regex_highlighting = false,
-        },
-        indent = { enable = true },
+        highlight = { enable = false },
+        indent = { enable = false },
       })
     end,
   },
