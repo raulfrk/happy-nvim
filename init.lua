@@ -23,5 +23,7 @@ vim.api.nvim_create_autocmd('User', {
     if ok then coach.setup() end
     local ok_c, clipboard = pcall(require, 'clipboard')
     if ok_c then clipboard.setup() end
+    local ok_t, tmux = pcall(require, 'tmux')
+    if ok_t then tmux.setup() end
   end,
 })
