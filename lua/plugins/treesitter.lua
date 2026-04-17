@@ -2,9 +2,12 @@
 return {
   {
     'nvim-treesitter/nvim-treesitter',
+    branch = 'master', -- v1.0 (main) removed nvim-treesitter.configs API
     event = { 'BufReadPre', 'BufNewFile' },
     build = ':TSUpdate',
-    dependencies = { 'nvim-treesitter/nvim-treesitter-textobjects' },
+    dependencies = {
+      { 'nvim-treesitter/nvim-treesitter-textobjects', branch = 'master' },
+    },
     config = function()
       require('nvim-treesitter.configs').setup({
         ensure_installed = {
