@@ -56,3 +56,30 @@ jobs:
           cp -r . $HOME/.config/nvim/
           nvim --headless -c 'qa!' 2>&1 | tee startup.log
           ! grep -Ei 'Error|E[0-9]+:' startup.log
+
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: stable
+      - name: Install minimal deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ripgrep fd-find tmux mosh
+          # symlink fdfind → fd (Debian quirk)
+          mkdir -p $HOME/.local/bin && ln -sf $(which fdfind) $HOME/.local/bin/fd
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: Install stylua + selene
+        uses: cargo-bins/cargo-binstall@main
+      - run: cargo binstall -y stylua selene
+      - name: Run :checkhealth happy-nvim in tmux
+        run: |
+          mkdir -p $HOME/.config/nvim
+          cp -r . $HOME/.config/nvim/
+          tmux new-session -d -s ci 'nvim --headless -c "checkhealth happy-nvim" -c "qa!" 2>&1 | tee /tmp/health.log; sleep 1'
+          sleep 3
+          cat /tmp/health.log
+          ! grep -i 'ERROR:' /tmp/health.log
