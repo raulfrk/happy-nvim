@@ -14,11 +14,10 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           version: latest
           args: --check .
-      - uses: NTBBloodbath/selene-action@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          version: latest
-          args: .
+      - name: Install selene
+        uses: cargo-bins/cargo-binstall@main
+      - run: cargo binstall -y selene
+      - run: selene .
 
   test:
     runs-on: ubuntu-latest
@@ -33,11 +32,15 @@ jobs:
           version: ${{ matrix.nvim }}
       - name: Run plenary tests
         run: |
+          set +e
           nvim --headless -u tests/minimal_init.lua \
             -c "PlenaryBustedDirectory tests/ {minimal_init='tests/minimal_init.lua'}" \
-            -c 'qa!' 2>&1 | tee test.log
-          grep -q 'Failed: 0' test.log
-          grep -q 'Errors: 0' test.log
+            2>&1 | tee test.log
+          set -e
+          grep -qE 'Failed *: *0' test.log
+          grep -qE 'Errors *: *0' test.log
+          ! grep -qE 'Failed *: *[1-9]' test.log
+          ! grep -qE 'Errors *: *[1-9]' test.log
 
   startup:
     runs-on: ubuntu-latest
