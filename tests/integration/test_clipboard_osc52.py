@@ -117,11 +117,13 @@ def test_textyankpost_emits_osc52(tmux_socket: str, scratch_nvim_config: Path, t
             if result.returncode == 0 and "hello" in result.stdout:
                 break
             time.sleep(0.1)
+        stdout = repr(result.stdout) if result else "no result"
+        stderr = repr(result.stderr) if result else "no result"
         assert result and result.returncode == 0 and "hello" in result.stdout, (
             "tmux paste buffer was not set to 'hello' after yank — "
             "OSC 52 sequence was not received by tmux.\n"
-            f"show-buffer stdout: {result.stdout!r if result else 'no result'}\n"
-            f"show-buffer stderr: {result.stderr!r if result else 'no result'}"
+            f"show-buffer stdout: {stdout}\n"
+            f"show-buffer stderr: {stderr}"
         )
     finally:
         tmx(tmux_socket, "kill-session", "-t", session, check=False)
