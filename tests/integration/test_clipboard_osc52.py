@@ -75,6 +75,11 @@ def test_textyankpost_emits_osc52(tmux_socket: str, scratch_nvim_config: Path, t
     }
     env_str = " ".join(f"{k}={v}" for k, v in env_overrides.items())
     try:
+        # Force tmux to capture OSC 52 into a paste buffer regardless of the
+        # runner's default `set-clipboard` value (varies: off on CI, on
+        # locally, external in some configs). With `set-clipboard on`, tmux
+        # decodes OSC 52 and writes it to the paste buffer we inspect below.
+        tmx(tmux_socket, "set-option", "-g", "set-clipboard", "on")
         # Start nvim in a tmux pane with a scratch buffer containing "hello"
         # Use double-quoted -c arg; single-quote the string literal inside.
         tmx(

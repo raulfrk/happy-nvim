@@ -26,11 +26,14 @@ jobs:
         nvim: [stable, nightly]
     steps:
       - uses: actions/checkout@v4
+      - name: Install tree-sitter CLI (needed by Lazy sync → TS parser builds)
+        run: sudo npm install -g tree-sitter-cli && tree-sitter --version
       - uses: rhysd/action-setup-vim@v1
         with:
           neovim: true
           version: ${{ matrix.nvim }}
       - name: Run plenary tests
+        timeout-minutes: 10
         env:
           HAPPY_NVIM_LOAD_CONFIG: '1'
         run: |
