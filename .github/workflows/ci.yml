@@ -92,3 +92,23 @@ jobs:
           sleep 3
           cat /tmp/health.log
           ! grep -i 'ERROR:' /tmp/health.log
+
+  integration:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        nvim: [stable, nightly]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tmux + pytest
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tmux python3-pytest
+          tmux -V
+          python3 -m pytest --version
+      - uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: ${{ matrix.nvim }}
+      - name: Run integration harness
+        run: bash scripts/test-integration.sh
