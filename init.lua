@@ -25,5 +25,7 @@ vim.api.nvim_create_autocmd('User', {
     if ok_c then clipboard.setup() end
     local ok_t, tmux = pcall(require, 'tmux')
     if ok_t then tmux.setup() end
+    local ok_r, remote = pcall(require, 'remote')
+    if ok_r then remote.setup() end
   end,
 })
