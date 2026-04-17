@@ -2,11 +2,9 @@
 return {
   {
     'nvim-treesitter/nvim-treesitter',
-    branch = 'master', -- v1.0 (main) removed nvim-treesitter.configs API
+    branch = 'master',
     event = { 'BufReadPre', 'BufNewFile' },
     build = ':TSUpdate',
-    -- textobjects disabled until they fix the nvim 0.11 range() nil crash
-    -- (Re-add once upstream tags a compatible release.)
     dependencies = {},
     config = function()
       require('nvim-treesitter.configs').setup({
@@ -21,12 +19,17 @@ return {
           'cpp',
           'bash',
           'yaml',
-          'markdown',
-          'markdown_inline',
           'json',
           'toml',
         },
-        highlight = { enable = true },
+        highlight = {
+          enable = true,
+          -- Markdown injection crashes on nvim 0.11 treesitter core
+          -- ("attempt to call method 'range' on nil"). Disable until
+          -- nvim-treesitter tags a 0.11-compatible release.
+          disable = { 'markdown', 'markdown_inline' },
+          additional_vim_regex_highlighting = false,
+        },
         indent = { enable = true },
       })
     end,
