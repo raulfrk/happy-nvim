@@ -17,15 +17,18 @@ describe('remote.hosts', function()
     assert.is_true(score < 4 and score > 3)
   end)
 
-  it('_merge merges frecency DB with ssh_config hosts (DB wins on rank, config adds unknown)', function()
-    local db = { alpha = { visits = 5, last_used = 1000 } }
-    local config = { 'alpha', 'beta', 'gamma' }
-    local merged = hosts._merge(db, config, 2000)
-    assert.are.equal(3, #merged)
-    -- alpha first (highest score)
-    assert.are.equal('alpha', merged[1].host)
-    assert.is_true(merged[1].score > 0)
-    -- beta + gamma have 0 score
-    assert.are.equal(0, merged[2].score)
-  end)
+  it(
+    '_merge merges frecency DB with ssh_config hosts (DB wins on rank, config adds unknown)',
+    function()
+      local db = { alpha = { visits = 5, last_used = 1000 } }
+      local config = { 'alpha', 'beta', 'gamma' }
+      local merged = hosts._merge(db, config, 2000)
+      assert.are.equal(3, #merged)
+      -- alpha first (highest score)
+      assert.are.equal('alpha', merged[1].host)
+      assert.is_true(merged[1].score > 0)
+      -- beta + gamma have 0 score
+      assert.are.equal(0, merged[2].score)
+    end
+  )
 end)

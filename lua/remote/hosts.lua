@@ -10,7 +10,9 @@ end
 
 function M._read_db()
   local f = io.open(DB_PATH, 'r')
-  if not f then return {} end
+  if not f then
+    return {}
+  end
   local raw = f:read('*a')
   f:close()
   local ok, db = pcall(vim.json.decode, raw)
@@ -52,7 +54,9 @@ function M._merge(db, config_hosts, now)
       table.insert(out, { host = host, score = 0 })
     end
   end
-  table.sort(out, function(a, b) return a.score > b.score end)
+  table.sort(out, function(a, b)
+    return a.score > b.score
+  end)
   return out
 end
 
@@ -66,52 +70,60 @@ function M.pick()
   local action_state = require('telescope.actions.state')
   local conf = require('telescope.config').values
 
-  pickers.new({}, {
-    prompt_title = 'ssh host',
-    finder = finders.new_table({
-      results = merged,
-      entry_maker = function(h)
-        return {
-          value = h.host,
-          display = string.format('%-30s  %6.2f', h.host, h.score),
-          ordinal = h.host,
-        }
+  pickers
+    .new({}, {
+      prompt_title = 'ssh host',
+      finder = finders.new_table({
+        results = merged,
+        entry_maker = function(h)
+          return {
+            value = h.host,
+            display = string.format('%-30s  %6.2f', h.host, h.score),
+            ordinal = h.host,
+          }
+        end,
+      }),
+      sorter = conf.generic_sorter({}),
+      attach_mappings = function(bufnr)
+        actions.select_default:replace(function()
+          actions.close(bufnr)
+          local sel = action_state.get_selected_entry()
+          if not sel then
+            return
+          end
+          local mosh = vim.fn.executable('mosh') == 1 and 'mosh' or 'ssh'
+          vim.system({ 'tmux', 'new-window', mosh .. ' ' .. sel.value }):wait()
+        end)
+        return true
       end,
-    }),
-    sorter = conf.generic_sorter({}),
-    attach_mappings = function(bufnr)
-      actions.select_default:replace(function()
-        actions.close(bufnr)
-        local sel = action_state.get_selected_entry()
-        if not sel then return end
-        local mosh = vim.fn.executable('mosh') == 1 and 'mosh' or 'ssh'
-        vim.system({ 'tmux', 'new-window', mosh .. ' ' .. sel.value }):wait()
-      end)
-      return true
-    end,
-  }):find()
+    })
+    :find()
 end
 
 function M.setup()
   vim.keymap.set('n', '<leader>ss', M.pick, { desc = 'ssh host picker' })
-  vim.api.nvim_create_user_command('HappyHostsPrune', function() -- prune unresolvable hosts from frecency DB
-    local db = M._read_db()
-    local pruned = 0
-    for host, _ in pairs(db) do
-      local res = vim.system({ 'getent', 'hosts', host }, { text = true }):wait()
-      if res.code ~= 0 then
-        db[host] = nil
-        pruned = pruned + 1
+  vim.api.nvim_create_user_command(
+    'HappyHostsPrune',
+    function() -- prune unresolvable hosts from frecency DB
+      local db = M._read_db()
+      local pruned = 0
+      for host, _ in pairs(db) do
+        local res = vim.system({ 'getent', 'hosts', host }, { text = true }):wait()
+        if res.code ~= 0 then
+          db[host] = nil
+          pruned = pruned + 1
+        end
       end
-    end
-    vim.fn.mkdir(vim.fn.stdpath('data') .. '/happy-nvim', 'p')
-    local f = io.open(DB_PATH, 'w')
-    if f then
-      f:write(vim.json.encode(db))
-      f:close()
-    end
-    vim.notify(string.format('pruned %d unresolvable hosts', pruned))
-  end, {})
+      vim.fn.mkdir(vim.fn.stdpath('data') .. '/happy-nvim', 'p')
+      local f = io.open(DB_PATH, 'w')
+      if f then
+        f:write(vim.json.encode(db))
+        f:close()
+      end
+      vim.notify(string.format('pruned %d unresolvable hosts', pruned))
+    end,
+    {}
+  )
 end
 
 return M

@@ -18,9 +18,15 @@ vim.api.nvim_create_autocmd({ 'FocusGained', 'BufEnter' }, {
 
 -- Per-filetype colorcolumn (BUG-3 fix: was hardcoded 80 globally)
 local cc_map = {
-  markdown = '80', text = '80',
-  lua = '120', go = '120', python = '120',
-  c = '120', cpp = '120', sh = '120', yaml = '120',
+  markdown = '80',
+  text = '80',
+  lua = '120',
+  go = '120',
+  python = '120',
+  c = '120',
+  cpp = '120',
+  sh = '120',
+  yaml = '120',
 }
 vim.api.nvim_create_autocmd('FileType', {
   group = aug,

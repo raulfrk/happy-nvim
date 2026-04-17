@@ -15,7 +15,9 @@ function M.scratch()
   if root == '' then
     root = vim.fn.getcwd()
   end
-  vim.system({ 'tmux', 'display-popup', '-E', '-w', '80%', '-h', '80%', '-d', root, 'zsh -l' }):wait()
+  vim
+    .system({ 'tmux', 'display-popup', '-E', '-w', '80%', '-h', '80%', '-d', root, 'zsh -l' })
+    :wait()
 end
 
 function M.btop()

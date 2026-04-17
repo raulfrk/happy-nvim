@@ -18,7 +18,13 @@ return {
     opts = {
       ensure_installed = {
         -- formatters
-        'stylua', 'ruff', 'goimports', 'gofumpt', 'shfmt', 'yamlfmt', 'clang-format',
+        'stylua',
+        'ruff',
+        'goimports',
+        'gofumpt',
+        'shfmt',
+        'yamlfmt',
+        'clang-format',
         -- linters
         'selene',
       },
@@ -51,16 +57,25 @@ return {
           map('<leader>la', vim.lsp.buf.code_action, 'code action')
           map('<leader>lr', vim.lsp.buf.rename, 'rename')
           map('<leader>de', vim.diagnostic.open_float, 'diag float')
-          map('<leader>dn', function() vim.diagnostic.goto_next() end, 'next diag')
-          map('<leader>dp', function() vim.diagnostic.goto_prev() end, 'prev diag')
+          map('<leader>dn', function()
+            vim.diagnostic.goto_next()
+          end, 'next diag')
+          map('<leader>dp', function()
+            vim.diagnostic.goto_prev()
+          end, 'prev diag')
         end,
       })
 
       -- Server setup via mason-lspconfig
       require('mason-lspconfig').setup({
         ensure_installed = {
-          'lua_ls', 'pylsp', 'gopls', 'bashls', 'yamlls',
-          'marksman', 'clangd',
+          'lua_ls',
+          'pylsp',
+          'gopls',
+          'bashls',
+          'yamlls',
+          'marksman',
+          'clangd',
         },
         handlers = {
           function(server)

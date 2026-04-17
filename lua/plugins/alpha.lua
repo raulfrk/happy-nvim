@@ -23,7 +23,8 @@ return {
     if ok then
       local t = coach.random_tip()
       if t then
-        dashboard.section.footer.val = string.format('Tip: %s — %s (%s)', t.keys, t.desc, t.category)
+        dashboard.section.footer.val =
+          string.format('Tip: %s — %s (%s)', t.keys, t.desc, t.category)
       end
     end
     require('alpha').setup(dashboard.config)

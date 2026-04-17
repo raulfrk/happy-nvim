@@ -15,9 +15,16 @@ function M._build_enter_cmd(pane_id)
 end
 
 function M.get_claude_pane_id()
-  local result = vim.system({
-    'tmux', 'show-option', '-w', '-v', '-q', '@claude_pane_id',
-  }, { text = true }):wait()
+  local result = vim
+    .system({
+      'tmux',
+      'show-option',
+      '-w',
+      '-v',
+      '-q',
+      '@claude_pane_id',
+    }, { text = true })
+    :wait()
   if result.code ~= 0 then
     return nil
   end
@@ -46,7 +53,10 @@ function M.send_to_claude(payload)
     return false
   end
   if #payload > 10 * 1024 then
-    local ok = vim.fn.confirm(string.format('Send %dKB to Claude pane?', math.floor(#payload / 1024)), '&Yes\n&No') == 1
+    local ok = vim.fn.confirm(
+      string.format('Send %dKB to Claude pane?', math.floor(#payload / 1024)),
+      '&Yes\n&No'
+    ) == 1
     if not ok then
       return false
     end

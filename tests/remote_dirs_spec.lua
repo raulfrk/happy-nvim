@@ -17,7 +17,8 @@ describe('remote.dirs', function()
   it('_build_find_cmd builds the expected ssh find command', function()
     local cmd = dirs._build_find_cmd('myhost')
     assert.are.same({
-      'ssh', 'myhost',
+      'ssh',
+      'myhost',
       [[find ~ -type d -maxdepth 6 -not -path '*/.*' -not -path '*/node_modules/*' 2>/dev/null]],
     }, cmd)
   end)

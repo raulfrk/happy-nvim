@@ -2,12 +2,31 @@
 local M = {}
 
 local BINARY_EXTS = {
-  png = true, jpg = true, jpeg = true, gif = true, pdf = true,
-  zip = true, tar = true, gz = true, xz = true, bz2 = true,
-  exe = true, so = true, o = true, a = true, bin = true,
-  mp4 = true, mov = true, mp3 = true, flac = true,
-  woff = true, woff2 = true, ttf = true, ico = true,
-  jar = true, class = true,
+  png = true,
+  jpg = true,
+  jpeg = true,
+  gif = true,
+  pdf = true,
+  zip = true,
+  tar = true,
+  gz = true,
+  xz = true,
+  bz2 = true,
+  exe = true,
+  so = true,
+  o = true,
+  a = true,
+  bin = true,
+  mp4 = true,
+  mov = true,
+  mp3 = true,
+  flac = true,
+  woff = true,
+  woff2 = true,
+  ttf = true,
+  ico = true,
+  jar = true,
+  class = true,
 }
 
 local MAX_SIZE = 5 * 1024 * 1024
@@ -16,7 +35,9 @@ function M._fast_path_ext(path)
   local lower = path:lower()
   -- check last suffix then all compound suffixes
   for ext in lower:gmatch('%.([^.]+)') do
-    if BINARY_EXTS[ext] then return true end
+    if BINARY_EXTS[ext] then
+      return true
+    end
   end
   return false
 end
@@ -51,18 +72,27 @@ end
 function M.open(host, rpath)
   -- Fast-path extension check (advisory, no SSH)
   if M._fast_path_ext(rpath) and not vim.b.happy_force_binary then
-    vim.notify(string.format(
-      'Binary extension detected for %s. Use :!scp host:path /tmp/ or <leader>sO to force.',
-      rpath), vim.log.levels.WARN)
+    vim.notify(
+      string.format(
+        'Binary extension detected for %s. Use :!scp host:path /tmp/ or <leader>sO to force.',
+        rpath
+      ),
+      vim.log.levels.WARN
+    )
     return
   end
   -- Authoritative probe
   if not vim.b.happy_force_binary then
     local blocked, reason = check_remote_binary(host, rpath)
     if blocked then
-      vim.notify(string.format(
-        '%s: %s. :!scp host:path /tmp/ manually, or <leader>sO to force.',
-        rpath, reason), vim.log.levels.WARN)
+      vim.notify(
+        string.format(
+          '%s: %s. :!scp host:path /tmp/ manually, or <leader>sO to force.',
+          rpath,
+          reason
+        ),
+        vim.log.levels.WARN
+      )
       return
     end
   end
@@ -71,19 +101,29 @@ end
 
 function M.browse()
   local host = vim.fn.input('Host: ')
-  if host == '' then return end
+  if host == '' then
+    return
+  end
   local path = vim.fn.input('Path: ')
-  if path == '' then return end
+  if path == '' then
+    return
+  end
   vim.cmd(string.format('edit scp://%s/%s/', host, path))
 end
 
 function M.find()
   local host = vim.fn.input('Host: ')
-  if host == '' then return end
+  if host == '' then
+    return
+  end
   local path = vim.fn.input('Path: ')
-  if path == '' then return end
+  if path == '' then
+    return
+  end
   local pat = vim.fn.input('Name pattern: ')
-  if pat == '' then return end
+  if pat == '' then
+    return
+  end
   local cmd = { 'ssh', host, string.format("find %s -name '%s' 2>/dev/null", path, pat) }
   local res = vim.system(cmd, { text = true }):wait()
   if res.code ~= 0 then
@@ -100,20 +140,24 @@ function M.find()
   local action_state = require('telescope.actions.state')
   local conf = require('telescope.config').values
 
-  pickers.new({}, {
-    prompt_title = string.format('find %s:%s  %s', host, path, pat),
-    finder = finders.new_table({ results = results }),
-    sorter = conf.generic_sorter({}),
-    attach_mappings = function(bufnr)
-      actions.select_default:replace(function()
-        actions.close(bufnr)
-        local sel = action_state.get_selected_entry()
-        if not sel then return end
-        M.open(host, sel[1])
-      end)
-      return true
-    end,
-  }):find()
+  pickers
+    .new({}, {
+      prompt_title = string.format('find %s:%s  %s', host, path, pat),
+      finder = finders.new_table({ results = results }),
+      sorter = conf.generic_sorter({}),
+      attach_mappings = function(bufnr)
+        actions.select_default:replace(function()
+          actions.close(bufnr)
+          local sel = action_state.get_selected_entry()
+          if not sel then
+            return
+          end
+          M.open(host, sel[1])
+        end)
+        return true
+      end,
+    })
+    :find()
 end
 
 function M.force_binary()

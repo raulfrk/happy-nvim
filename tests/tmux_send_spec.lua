@@ -17,7 +17,12 @@ describe('tmux.send', function()
   it('_build_send_cmd assembles the expected tmux invocation', function()
     local cmd = send._build_send_cmd('%42', 'hello world')
     assert.are.same({
-      'tmux', 'send-keys', '-t', '%42', '-l', 'hello world',
+      'tmux',
+      'send-keys',
+      '-t',
+      '%42',
+      '-l',
+      'hello world',
     }, cmd)
   end)
 

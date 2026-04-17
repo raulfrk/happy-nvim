@@ -9,10 +9,7 @@ end
 function M._build_cs_payload(rel_path, lstart, lend, ft, lines)
   local content = table.concat(lines, '\n')
   local fence = content:find('```', 1, true) and '~~~' or '```'
-  return string.format(
-    '@%s:%d-%d\n%s%s\n%s\n%s',
-    rel_path, lstart, lend, fence, ft, content, fence
-  )
+  return string.format('@%s:%d-%d\n%s%s\n%s\n%s', rel_path, lstart, lend, fence, ft, content, fence)
 end
 
 local SEVERITY_NAMES = { 'ERROR', 'WARN', 'INFO', 'HINT' }
@@ -20,8 +17,15 @@ local SEVERITY_NAMES = { 'ERROR', 'WARN', 'INFO', 'HINT' }
 function M._build_ce_payload(rel_path, diags)
   local bullets = {}
   for _, d in ipairs(diags) do
-    table.insert(bullets, string.format('- %s: %s (line %d)',
-      SEVERITY_NAMES[d.severity] or 'UNKNOWN', d.message, d.lnum + (d.lnum == 0 and 0 or 0)))
+    table.insert(
+      bullets,
+      string.format(
+        '- %s: %s (line %d)',
+        SEVERITY_NAMES[d.severity] or 'UNKNOWN',
+        d.message,
+        d.lnum + (d.lnum == 0 and 0 or 0)
+      )
+    )
   end
   return string.format('@%s\nDiagnostics:\n%s\n\nFix these.', rel_path, table.concat(bullets, '\n'))
 end
@@ -37,9 +41,19 @@ function M.open()
     return
   end
   local cwd = vim.fn.expand('%:p:h')
-  local res = vim.system({
-    'tmux', 'split-window', '-h', '-c', cwd, '-P', '-F', '#{pane_id}', 'claude',
-  }, { text = true }):wait()
+  local res = vim
+    .system({
+      'tmux',
+      'split-window',
+      '-h',
+      '-c',
+      cwd,
+      '-P',
+      '-F',
+      '#{pane_id}',
+      'claude',
+    }, { text = true })
+    :wait()
   if res.code == 0 then
     local new_id = (res.stdout or ''):gsub('%s+$', '')
     send.set_claude_pane_id(new_id)

@@ -36,7 +36,10 @@ function M.setup()
       local content = table.concat(vim.v.event.regcontents, '\n')
       local seq = M._encode_osc52(content)
       if seq == nil then
-        vim.notify('happy-nvim: yank too large for OSC52 (host clipboard skipped)', vim.log.levels.WARN)
+        vim.notify(
+          'happy-nvim: yank too large for OSC52 (host clipboard skipped)',
+          vim.log.levels.WARN
+        )
         return
       end
       M._emit(seq)

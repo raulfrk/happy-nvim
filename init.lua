@@ -20,12 +20,20 @@ vim.api.nvim_create_autocmd('User', {
   once = true,
   callback = function()
     local ok, coach = pcall(require, 'coach')
-    if ok then coach.setup() end
+    if ok then
+      coach.setup()
+    end
     local ok_c, clipboard = pcall(require, 'clipboard')
-    if ok_c then clipboard.setup() end
+    if ok_c then
+      clipboard.setup()
+    end
     local ok_t, tmux = pcall(require, 'tmux')
-    if ok_t then tmux.setup() end
+    if ok_t then
+      tmux.setup()
+    end
     local ok_r, remote = pcall(require, 'remote')
-    if ok_r then remote.setup() end
+    if ok_r then
+      remote.setup()
+    end
   end,
 })

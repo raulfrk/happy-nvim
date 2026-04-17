@@ -12,7 +12,13 @@ describe('tmux.claude', function()
   end)
 
   it('_build_cs_payload builds fenced block with path:line range', function()
-    local p = claude._build_cs_payload('src/foo.lua', 12, 14, 'lua', { 'local x = 1', 'local y = 2', 'local z = 3' })
+    local p = claude._build_cs_payload(
+      'src/foo.lua',
+      12,
+      14,
+      'lua',
+      { 'local x = 1', 'local y = 2', 'local z = 3' }
+    )
     assert.is_true(p:find('@src/foo.lua:12%-14') ~= nil)
     assert.is_true(p:find('```lua') ~= nil)
     assert.is_true(p:find('local x = 1') ~= nil)

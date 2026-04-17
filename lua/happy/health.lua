@@ -36,7 +36,9 @@ function M.check()
     if passthrough:match('on') then
       h.ok('tmux allow-passthrough=on (OSC 52 host clipboard will work)')
     else
-      h.warn('tmux allow-passthrough off — host clipboard via OSC 52 may be stripped. Set: tmux set -g allow-passthrough on')
+      h.warn(
+        'tmux allow-passthrough off — host clipboard via OSC 52 may be stripped. Set: tmux set -g allow-passthrough on'
+      )
     end
     local _, setclip = exec({ 'tmux', 'show-option', '-v', '-g', 'set-clipboard' })
     if setclip:match('on') or setclip:match('external') then
@@ -51,7 +53,11 @@ function M.check()
     local ok, ver = exec({ 'mosh', '--version' })
     if ok then
       local major, minor = ver:match('mosh (%d+)%.(%d+)')
-      if major and minor and (tonumber(major) > 1 or (tonumber(major) == 1 and tonumber(minor) >= 4)) then
+      if
+        major
+        and minor
+        and (tonumber(major) > 1 or (tonumber(major) == 1 and tonumber(minor) >= 4))
+      then
         h.ok('mosh ' .. major .. '.' .. minor .. ' (>= 1.4 required for OSC 52 passthrough)')
       else
         h.warn('mosh < 1.4 — OSC 52 will be stripped, host clipboard unavailable')
