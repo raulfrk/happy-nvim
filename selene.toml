@@ -2,4 +2,8 @@ std = "lua51+nvim"
 exclude = [
   "lazy-lock.json",
   ".tests/",
+  "tests/",
 ]
+
+[lints]
+mixed_table = "allow"
