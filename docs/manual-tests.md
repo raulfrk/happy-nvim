@@ -10,7 +10,7 @@ for any fail.
 - [ ] `nvim --version` reports 0.11+
 - [ ] `tmux -V` reports 3.2+
 - [ ] `tree-sitter --version` exists on $PATH
-- [ ] Terminal font is a Nerd Font (icons render, not boxes/?)
+- [ ] Terminal font is a Nerd Font (icons render, not boxes/?). If you see `?`, run `fc-list | grep -i 'nerd font'` — empty output = install per README Prerequisites.
 - [ ] `$SHELL` is zsh or bash
 
 ## 1. Core editing

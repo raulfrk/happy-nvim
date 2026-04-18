@@ -5,6 +5,35 @@ toward native nvim motions, text objects, macros, and registers.
 
 Successor to [MyHappyPlace](https://github.com/raulfrk/MyHappyPlace).
 
+## Prerequisites
+
+**Required:**
+- Neovim >= 0.11 (for `winborder` + `vim.lsp.config`)
+- tmux >= 3.2 (for `display-popup -E`)
+- Node.js + npm (for `tree-sitter-cli` install via `migrate.sh`)
+- git
+- ripgrep (`rg`) + fd-find (`fd`) — telescope defaults
+
+**Recommended (for full feature set):**
+- A Nerd Font in your terminal — otherwise icons render as `?` or boxes.
+  Quick install:
+
+    ```bash
+    # Linux (fontconfig)
+    mkdir -p ~/.local/share/fonts && cd ~/.local/share/fonts
+    curl -L -O https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip
+    unzip -o JetBrainsMono.zip && fc-cache -fv
+
+    # macOS
+    brew install --cask font-jetbrains-mono-nerd-font
+    ```
+
+    Set your terminal font to `JetBrainsMono Nerd Font` (or any other Nerd
+    Font you like).
+
+- mosh >= 1.4 — for `OSC 52` clipboard passthrough over unreliable links
+- claude CLI on `$PATH` — for `<leader>c*` tmux integration
+
 ## Install
 
 ```bash

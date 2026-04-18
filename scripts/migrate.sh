@@ -47,6 +47,15 @@ if ! command -v tree-sitter >/dev/null 2>&1; then
 fi
 log "tree-sitter: $(tree-sitter --version 2>&1 | head -1)"
 
+# 1c. Preflight — Nerd Font detection (warning only, not fatal)
+if command -v fc-list >/dev/null 2>&1; then
+  if ! fc-list 2>/dev/null | grep -qi 'nerd font'; then
+    warn "No Nerd Font detected in fc-list. Icons will render as '?' or boxes."
+    warn "Install one: https://github.com/ryanoasis/nerd-fonts/releases"
+    warn "Then set your terminal font to e.g. 'JetBrainsMono Nerd Font'."
+  fi
+fi
+
 is_happy_nvim() {
   [[ -f "$1/init.lua" ]] && grep -q 'happy-nvim' "$1/README.md" 2>/dev/null
 }
