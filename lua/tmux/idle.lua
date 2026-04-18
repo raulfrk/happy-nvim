@@ -1,11 +1,27 @@
 -- lua/tmux/idle.lua — per-session idle detection for multi-project Claude.
 -- Polls tmux capture-pane every ~1s; flips @claude_idle=1 after
 -- DEBOUNCE_SECS of stable output, =0 on new input. Pure-function core
--- (_tick, _hash) is unit-testable; watch_all() is the impure driver.
+-- (_tick, _hash, _should_alert) is unit-testable; watch_all() is the
+-- impure driver.
 local M = {}
 
 local DEBOUNCE_SECS = 2
 local POLL_INTERVAL_MS = 1000
+
+local DEFAULT_OPTS = {
+  notify = true,
+  bell = false,
+  desktop = false,
+  cooldown_secs = 10,
+  skip_focused = true,
+}
+
+local opts = vim.deepcopy(DEFAULT_OPTS)
+local last_alert_ts = {}
+
+function M.setup(user_opts)
+  opts = vim.tbl_deep_extend('force', vim.deepcopy(DEFAULT_OPTS), user_opts or {})
+end
 
 -- Hash a capture so we store fixed-size state instead of the whole pane.
 -- 'hash-<raw>' prefix is testable; real implementation uses sha256 for
@@ -46,6 +62,56 @@ function M._tick(state, capture, now)
   return state, false
 end
 
+-- Pure: decide whether to fire an alert for `session` right now.
+-- Returns true iff at least one channel is enabled, the session isn't the
+-- currently-focused one (when skip_focused), and the cooldown has elapsed.
+function M._should_alert(session, focused_session, last_ts, now, o)
+  if not (o.notify or o.bell or o.desktop) then
+    return false
+  end
+  if o.skip_focused and session == focused_session then
+    return false
+  end
+  if last_ts and (now - last_ts) < o.cooldown_secs then
+    return false
+  end
+  return true
+end
+
+local function focused_session()
+  local res = vim
+    .system({ 'tmux', 'display-message', '-p', '#{session_name}' }, { text = true })
+    :wait()
+  if res.code ~= 0 then
+    return nil
+  end
+  return (res.stdout or ''):gsub('%s+$', '')
+end
+
+local function fire_alert(session)
+  local slug = session:gsub('^cc%-', '')
+  local msg = 'Claude (' .. slug .. ') idle'
+  if opts.notify then
+    vim.notify(msg, vim.log.levels.INFO, { title = 'Claude' })
+  end
+  if opts.bell then
+    io.stderr:write('\a')
+  end
+  if opts.desktop then
+    if vim.fn.executable('notify-send') == 1 then
+      vim.system({ 'notify-send', 'Claude', msg }):wait()
+    elseif vim.fn.executable('osascript') == 1 then
+      vim
+        .system({
+          'osascript',
+          '-e',
+          'display notification "' .. msg .. '" with title "Claude"',
+        })
+        :wait()
+    end
+  end
+end
+
 -- Impure: poll all cc-* sessions once + apply side effects for flips.
 -- Kept separate from _tick so it can be mocked out in integration tests.
 local states = {}
@@ -54,6 +120,13 @@ local function apply_flip(session_name, idle)
   local val = idle and '1' or '0'
   vim.system({ 'tmux', 'set-option', '-t', session_name, '@claude_idle', val }):wait()
   vim.system({ 'tmux', 'refresh-client', '-S' }):wait()
+  if idle then
+    local now = os.time()
+    if M._should_alert(session_name, focused_session(), last_alert_ts[session_name], now, opts) then
+      fire_alert(session_name)
+      last_alert_ts[session_name] = now
+    end
+  end
 end
 
 function M._poll_once(now)
@@ -104,6 +177,7 @@ function M.stop()
     timer = nil
   end
   states = {}
+  last_alert_ts = {}
 end
 
 return M
