@@ -233,6 +233,67 @@ require('tmux.claude_popup').setup({
 Values are passed verbatim to `tmux display-popup -w / -h`, so absolute
 cell counts (e.g. `120`) work too.
 
+## Running tests
+
+Three layers, cheapest first. All four commands run from the repo root.
+
+### 1. Unit tests — plenary busted specs
+
+Fast (~1s). Pure-lua assertions on module internals (project-id
+resolver, idle state machine, coach tips, etc.).
+
+```bash
+nvim --headless -u tests/minimal_init.lua \
+  -c "PlenaryBustedDirectory tests/ {minimal_init='tests/minimal_init.lua'}" \
+  -c 'qa!'
+```
+
+### 2. Integration tests — real nvim in tmux
+
+Slower (~30s). Scenarios spawn real nvim inside isolated tmux sessions
+using the `fake-claude` stub. Requires `python3 -m pytest` + tmux >= 3.2.
+
+```bash
+bash scripts/test-integration.sh           # full suite
+python3 -m pytest tests/integration/ -v    # equivalent
+python3 -m pytest tests/integration/test_harpoon.py -v   # single scenario
+```
+
+Regenerate golden files for tests that use `assert_capture_equals`:
+
+```bash
+UPDATE_GOLDEN=1 python3 -m pytest tests/integration/test_whichkey_menu.py -v
+```
+
+### 3. One-button assessment — `scripts/assess.sh`
+
+All six layers: shell/python syntax, init bootstrap, plenary, pytest
+integration, `:checkhealth`. Prints a pass/fail table. Exits nonzero
+on any failure. CI runs this under nvim stable + nightly.
+
+```bash
+bash scripts/assess.sh
+```
+
+Example output:
+
+```
+ LAYER                STATUS DURATION
+----------------------------------------------------------------
+ shell-syntax         PASS   0s
+ python-syntax        PASS   1s
+ init-bootstrap       PASS   0s
+ plenary              PASS   1s
+ integration          PASS   35s
+ checkhealth          PASS   0s
+ASSESS: ALL LAYERS PASS
+```
+
+### 4. Manual checklist — `docs/manual-tests.md`
+
+For features CI can't exercise (real `claude` CLI, real SSH, host clipboard,
+Nerd Font rendering). Walk through before cutting a release.
+
 ## Multi-project notifications
 
 Each active Claude session carries a `@claude_idle` tmux option that flips to
