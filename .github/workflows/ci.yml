@@ -5,120 +5,6 @@ on:
   pull_request:
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: JohnnyMorganz/stylua-action@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          version: latest
-          args: --check .
-      - name: Install selene
-        uses: cargo-bins/cargo-binstall@main
-      - run: cargo binstall -y selene
-      - run: selene .
-
-  test:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        nvim: [stable, nightly]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install tree-sitter CLI (needed by Lazy sync → TS parser builds)
-        run: sudo npm install -g tree-sitter-cli && tree-sitter --version
-      - uses: rhysd/action-setup-vim@v1
-        with:
-          neovim: true
-          version: ${{ matrix.nvim }}
-      - name: Run plenary tests
-        timeout-minutes: 10
-        env:
-          HAPPY_NVIM_LOAD_CONFIG: '1'
-        run: |
-          # Install repo as the user's nvim config so Lazy can find lua/plugins/
-          mkdir -p "$HOME/.config/nvim"
-          cp -r . "$HOME/.config/nvim/"
-          nvim --headless -c 'Lazy! sync' -c 'qa!' 2>&1 | tail -5 || true
-          set +e
-          nvim --headless -u tests/minimal_init.lua \
-            -c "PlenaryBustedDirectory tests/ {minimal_init='tests/minimal_init.lua'}" \
-            2>&1 | tee test.log
-          set -e
-          sed -r 's/\x1b\[[0-9;]*m//g' test.log > test.clean.log
-          grep -q 'Success:' test.clean.log
-          if grep -qE 'Failed *: *[1-9]|Errors *: *[1-9]' test.clean.log; then
-            echo 'Test failure/error detected'
-            grep -E 'Failed|Errors' test.clean.log
-            exit 1
-          fi
-
-  startup:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        nvim: [stable, nightly]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: rhysd/action-setup-vim@v1
-        with:
-          neovim: true
-          version: ${{ matrix.nvim }}
-      - name: Headless startup smoke
-        run: |
-          mkdir -p $HOME/.config/nvim
-          cp -r . $HOME/.config/nvim/
-          nvim --headless -c 'qa!' 2>&1 | tee startup.log
-          ! grep -Ei 'Error|E[0-9]+:' startup.log
-
-  health:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: rhysd/action-setup-vim@v1
-        with:
-          neovim: true
-          version: stable
-      - name: Install minimal deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ripgrep fd-find tmux mosh
-          # symlink fdfind → fd (Debian quirk)
-          mkdir -p $HOME/.local/bin && ln -sf $(which fdfind) $HOME/.local/bin/fd
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-      - name: Install stylua + selene
-        uses: cargo-bins/cargo-binstall@main
-      - run: cargo binstall -y stylua selene
-      - name: Run :checkhealth happy-nvim in tmux
-        run: |
-          mkdir -p $HOME/.config/nvim
-          cp -r . $HOME/.config/nvim/
-          tmux new-session -d -s ci 'nvim --headless -c "checkhealth happy-nvim" -c "qa!" 2>&1 | tee /tmp/health.log; sleep 1'
-          sleep 3
-          cat /tmp/health.log
-          ! grep -i 'ERROR:' /tmp/health.log
-
-  integration:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        nvim: [stable, nightly]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install tmux + pytest
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y tmux python3-pytest
-          tmux -V
-          python3 -m pytest --version
-      - uses: rhysd/action-setup-vim@v1
-        with:
-          neovim: true
-          version: ${{ matrix.nvim }}
-      - name: Run integration harness
-        run: bash scripts/test-integration.sh
-
   assess:
     runs-on: ubuntu-latest
     strategy:
@@ -126,19 +12,35 @@ jobs:
         nvim: [stable, nightly]
     steps:
       - uses: actions/checkout@v4
-      - name: Install tmux + pytest
+
+      - name: Install apt deps (tmux, pytest, ripgrep, fd, mosh)
         run: |
           sudo apt-get update
-          sudo apt-get install -y tmux python3-pytest
-          tmux -V
-          python3 -m pytest --version
+          sudo apt-get install -y tmux python3-pytest ripgrep fd-find mosh
+          # Debian ships fd-find as 'fdfind'; telescope expects 'fd'
+          mkdir -p "$HOME/.local/bin" && ln -sf "$(which fdfind)" "$HOME/.local/bin/fd"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install tree-sitter CLI
+        run: sudo npm install -g tree-sitter-cli && tree-sitter --version
+
+      - name: Install stylua + selene
+        uses: cargo-bins/cargo-binstall@main
+      - run: cargo binstall -y stylua selene
+
       - uses: rhysd/action-setup-vim@v1
         with:
           neovim: true
           version: ${{ matrix.nvim }}
-      - name: Install tree-sitter CLI
-        run: |
-          sudo npm install -g tree-sitter-cli
-          tree-sitter --version
+
+      - name: Cache lazy.nvim plugin directory
+        uses: actions/cache@v4
+        with:
+          path: .tests/nvim/lazy
+          key: lazy-${{ runner.os }}-${{ matrix.nvim }}-${{ hashFiles('lazy-lock.json', 'lua/plugins/**') }}
+          restore-keys: |
+            lazy-${{ runner.os }}-${{ matrix.nvim }}-
+
       - name: Run assess.sh (full feature acceptance)
+        timeout-minutes: 15
         run: bash scripts/assess.sh

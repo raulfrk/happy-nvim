@@ -61,6 +61,23 @@ run_layer() {
   echo "=== $name: ${LAYER_STATUS[$name]} (${LAYER_DURATION[$name]}s) ==="
 }
 
+
+# Layer 0: stylua + selene (fastest lint); gracefully skip if tools missing
+layer_lint() {
+  local rc=0
+  if command -v stylua >/dev/null 2>&1; then
+    stylua --check . || rc=1
+  else
+    echo 'layer_lint: stylua not on $PATH — skipping format check'
+  fi
+  if command -v selene >/dev/null 2>&1; then
+    selene . || rc=1
+  else
+    echo 'layer_lint: selene not on $PATH — skipping static analysis'
+  fi
+  return $rc
+}
+
 # Layer 1: shell syntax
 layer_shell_syntax() {
   local rc=0
@@ -108,6 +125,7 @@ layer_checkhealth() {
   ! grep -Eiq '^\s*ERROR\b' "$ASSESS_SCRATCH/health.log"
 }
 
+run_layer 'lint'              layer_lint
 run_layer 'shell-syntax'      layer_shell_syntax
 run_layer 'python-syntax'     layer_python_syntax
 run_layer 'init-bootstrap'    layer_init_bootstrap
