@@ -57,6 +57,8 @@ Requires `claude` CLI on $PATH + `$TMUX` set.
 - [ ] `<Space>cl` then `<C-x>` on an entry — session killed, picker refreshes.
 - [ ] `<Space>cn` then type `sidebar` — spawns `cc-sidebar` session + popup.
 - [ ] `<Space>ck` — confirm Yes — current project's session killed.
+- [ ] Inside Claude popup, press `Ctrl-C` mid-reply — claude interrupts the current generation, popup stays open, history preserved
+- [ ] `<Space>cp` again — same conversation visible (Ctrl-C didn't tear it down)
 
 ## 5. Multi-project Claude
 
@@ -68,6 +70,10 @@ Open 2 tmux panes, nvim in each, one in /path/to/repoA, other in /path/to/repoB.
 - [ ] Let A reply + go idle ≥2s. `<Space>cl` picker shows `✓ <A>`.
 - [ ] Send new input to A. `<Space>cl` shows `⟳ <A>`.
 - [ ] If tmux status-right snippet from README is installed: status bar shows per-project badges.
+
+- [ ] `git worktree add` a branch + run `wt-claude-provision.sh <path>` — `tmux ls` shows new `cc-<repo>-wt-<branch>` session
+- [ ] Open nvim in that worktree → `<Space>cp` attaches to the pre-warmed session (history empty since just-spawned, but no cold-start delay)
+- [ ] Run `wt-claude-cleanup.sh <path>` then `git worktree remove <path>` → `tmux ls` no longer shows the session
 
 ## 6. Remote (ssh/scp, real host)
 
