@@ -50,6 +50,28 @@ One-button validator: `bash scripts/assess.sh`. Runs every layer
 - Never mention Claude Code or AI assistance in the commit body — keep
   the log implementation-focused.
 
+## Subprocess hygiene
+
+- Use `vim.system(cmd, opts, on_exit)` (callback form) for any subprocess
+  that may run longer than ~1 second. Reserve `vim.system(cmd):wait()`
+  for operations guaranteed to finish sub-second (e.g. `tmux
+  set-option`, `tmux display-message`, `tmux new-session -d`) AND where
+  the caller needs the result synchronously.
+- Why: `:wait()` blocks nvim's main thread for the subprocess's full
+  lifetime. During the block, `vim.uv.timer` callbacks don't fire,
+  `vim.schedule` queued fns don't run, and the UI freezes. This
+  starves the idle watcher (`lua/tmux/idle.lua`) and every other
+  timer-driven feature. Verified empirically on nvim 0.12.1: a
+  300ms-interval timer fires 0 times during a 2-second blocking
+  `vim.system({'sleep','2'}):wait()`.
+- Reference fix: commit `ebf0846` converted
+  `lua/tmux/claude_popup.lua:M.open` from `:wait()` to the callback
+  form so idle notifications fire while the popup is open.
+- Regression tests for the pattern: `tests/tmux_claude_popup_spec.lua`
+  (stubs `vim.system`, asserts `open()` passes a callback) +
+  `tests/integration/test_idle_alert_during_popup.py` (drives the real
+  `vim.uv.timer` while an async subprocess is pending).
+
 ## Sandbox note
 
 When running under Claude Code's bubblewrap sandbox:
