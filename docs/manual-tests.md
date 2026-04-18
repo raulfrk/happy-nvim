@@ -13,6 +13,7 @@ for any fail.
 - [ ] Terminal font is a Nerd Font (icons render, not boxes/?). If you see `?`, run `fc-list | grep -i 'nerd font'` — empty output = install per README Prerequisites.
 - [ ] `$SHELL` is zsh or bash
 - [ ] `bash scripts/assess.sh` runs to completion with `ASSESS: ALL LAYERS PASS`
+- [ ] Inside nvim `:HappyAssess` opens a scratch buffer w/ live output; final line shows `:HappyAssess finished (exit code 0)`
 
 ## 1. Core editing
 
