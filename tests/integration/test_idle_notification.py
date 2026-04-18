@@ -1,9 +1,11 @@
-"""Integration test: @claude_idle flips correctly.
+"""Integration test: @claude_idle flips correctly, driven by real vim.uv.timer.
 
-We drive the idle loop manually (_poll_once) to avoid 5+ second waits
-for the real vim.uv timer to tick. fake_claude emits ACK 500ms after
-input; then output is stable; we advance "now" past the debounce
-window and expect @claude_idle=1.
+Previously drove `_poll_once` manually. That proved the state machine
+but not the timer wiring — a regression to `watch_all()` (forgotten
+`vim.schedule_wrap`, timer leak, etc.) would have gone undetected.
+
+Now uses `tmux.idle.watch_all()` + `vim.wait()` so the real 1s poll
+cadence and 2s debounce play out end-to-end.
 """
 from __future__ import annotations
 
@@ -33,11 +35,9 @@ def _tmux_wrapper(bin_dir: Path, socket: str) -> None:
     w.chmod(0o755)
 
 
-def _poll_twice_via_nvim(bin_dir: Path, now1: int, now2: int) -> None:
-    """Run two consecutive _poll_once calls in the same nvim instance.
-
-    This preserves the in-memory `states` table between ticks so the
-    debounce logic sees Tick 1 (init) then Tick 2 (stable → idle flip).
+def _run_watcher(bin_dir: Path, wait_ms: int) -> None:
+    """Start tmux.idle.watch_all() and block the main thread in vim.wait
+    so the real libuv timer can tick (poll every 1s, flip after 2s stable).
     """
     env = os.environ | {
         "PATH": f"{bin_dir}:{os.environ['PATH']}",
@@ -45,22 +45,26 @@ def _poll_twice_via_nvim(bin_dir: Path, now1: int, now2: int) -> None:
     }
     subprocess.run(
         [
-            "nvim",
-            "--headless",
-            "--clean",
-            "-c",
-            f"lua vim.opt.rtp:prepend('{REPO_ROOT}')",
-            "-c",
-            f"lua require('tmux.idle')._poll_once({now1})",
-            "-c",
-            f"lua require('tmux.idle')._poll_once({now2})",
-            "-c",
-            "qa!",
+            "nvim", "--headless", "--clean",
+            "-c", f"lua vim.opt.rtp:prepend('{REPO_ROOT}')",
+            "-c", "lua require('tmux.idle').watch_all()",
+            "-c", f"lua vim.wait({wait_ms}, function() return false end, 100)",
+            "-c", "qa!",
         ],
-        check=True,
-        text=True,
-        capture_output=True,
-        env=env,
+        check=True, text=True, capture_output=True, env=env,
+    )
+
+
+def _mark_busy_via_nvim(bin_dir: Path, session: str) -> None:
+    env = os.environ | {"PATH": f"{bin_dir}:{os.environ['PATH']}"}
+    subprocess.run(
+        [
+            "nvim", "--headless", "--clean",
+            "-c", f"lua vim.opt.rtp:prepend('{REPO_ROOT}')",
+            "-c", f"lua require('tmux.idle').mark_busy('{session}')",
+            "-c", "qa!",
+        ],
+        check=True, capture_output=True, env=env,
     )
 
 
@@ -89,32 +93,19 @@ def test_idle_flips_on_stable_output(tmux_socket: str, tmp_path: Path):
 
         send_keys(tmux_socket, pane, "hello", "Enter")
         wait_for_pane(tmux_socket, pane, r"ACK:hello", timeout=5)
-        # give fake_claude a moment after the ACK so output is truly settled
+        # Let fake_claude's trailing "> " stabilize before the watcher starts.
         time.sleep(0.5)
 
-        # Two ticks in one nvim invocation so in-memory state survives:
-        # Tick 1 (now): initial capture → init, not idle yet
-        # Tick 2 (now+3): same capture, 3s > DEBOUNCE_SECS=2 → flip to idle
-        now = int(time.time())
-        _poll_twice_via_nvim(bin_dir, now, now + 3)
+        # Real-timer drive: 3500ms is enough for poll #1 (init), poll #2
+        # (stable 2s >= DEBOUNCE_SECS → flip), poll #3 (already idle).
+        _run_watcher(bin_dir, wait_ms=3500)
         assert _get_idle(tmux_socket) == "1", (
             f"@claude_idle should be '1' after debounce, got {_get_idle(tmux_socket)!r}"
         )
 
-        # Send input -> flips back to busy. Use mark_busy for immediacy.
+        # mark_busy path: simulate send.send_to_claude / popup.open firing it.
         send_keys(tmux_socket, pane, "more-input", "Enter")
-        # Lua-side: emulate the send-path call to mark_busy
-        subprocess.run(
-            [
-                "nvim", "--headless", "--clean",
-                "-c", f"lua vim.opt.rtp:prepend('{REPO_ROOT}')",
-                "-c", f"lua require('tmux.idle').mark_busy('{SESSION}')",
-                "-c", "qa!",
-            ],
-            check=True,
-            capture_output=True,
-            env=os.environ | {"PATH": f"{bin_dir}:{os.environ['PATH']}"},
-        )
+        _mark_busy_via_nvim(bin_dir, SESSION)
         assert _get_idle(tmux_socket) == "0", (
             f"@claude_idle should be '0' after mark_busy, got {_get_idle(tmux_socket)!r}"
         )
