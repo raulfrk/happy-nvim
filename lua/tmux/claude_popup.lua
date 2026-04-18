@@ -69,29 +69,19 @@ function M.open()
   if not M.ensure() then
     return
   end
-  -- Async: blocking :wait() here freezes nvim's event loop for the popup's
-  -- lifetime, which starves idle.watch_all()'s vim.uv.timer — no flip
-  -- detection, no notification fires while the user is in the popup. The
-  -- callback form keeps the main thread responsive; mark_busy runs on
-  -- detach (subprocess exit). -E closes popup when inner cmd exits.
-  vim.system(
-    {
-      'tmux',
-      'display-popup',
-      '-E',
-      '-w',
-      M._config.popup.width,
-      '-h',
-      M._config.popup.height,
-      'tmux attach -t ' .. session(),
-    },
-    { text = true },
-    vim.schedule_wrap(function(_)
+  -- Async contract: see lua/tmux/_popup.lua + commit ebf0846.
+  require('tmux._popup').open(
+    M._config.popup.width,
+    M._config.popup.height,
+    'tmux attach -t ' .. session(),
+    function()
+      -- Popup closed. User was typing in there; mark the session busy
+      -- so the next idle flip needs a fresh DEBOUNCE_SECS of quiet.
       local ok_idle, idle = pcall(require, 'tmux.idle')
       if ok_idle then
         idle.mark_busy(session())
       end
-    end)
+    end
   )
 end
 

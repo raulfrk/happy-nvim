@@ -1,15 +1,22 @@
 -- tests/config_options_spec.lua
--- Unit tests for the defensive wrapper around vim.treesitter.get_range
--- installed by lua/config/options.lua. Purpose: muzzle the
+-- Unit tests for lua/config/ts_shim.lua — the defensive wrapper
+-- around vim.treesitter.get_range that muzzles the
 -- "attempt to call method 'range' (a nil value)" crash from nvim 0.12's
--- runtime/lua/vim/treesitter.lua:196 when a query capture yields nil
--- node with non-informative metadata.
+-- runtime/lua/vim/treesitter.lua:196 when a query capture yields a
+-- non-TSNode value.
+
+-- Capture the real (unwrapped) get_range at spec-load time. minimal_init
+-- doesn't load user config by default, so this is the nvim runtime
+-- original. Each test before_each restores it before re-installing so
+-- we don't stack wrappers across cases.
+local ORIG_GET_RANGE = vim.treesitter.get_range
 
 describe('vim.treesitter.get_range defensive wrapper', function()
   before_each(function()
-    -- Re-source options.lua to install the wrapper in this spec's env.
-    package.loaded['config.options'] = nil
-    dofile(vim.fn.getcwd() .. '/lua/config/options.lua')
+    vim.treesitter.get_range = ORIG_GET_RANGE
+    vim.g._happy_ts_shim_installed = nil
+    package.loaded['config.ts_shim'] = nil
+    require('config.ts_shim').install()
   end)
 
   it('returns an empty Range6 when node is nil', function()

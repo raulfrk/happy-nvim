@@ -4,6 +4,8 @@
 # Test runner artifacts
 .tests/
 tests/.coverage/
+tests/**/__pycache__/
+.pytest_cache/
 
 # Neovim state (should never be inside the config repo, but defensive)
 .cache/

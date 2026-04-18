@@ -39,27 +39,10 @@ def _write_scratch_config(cfg_dir: Path) -> None:
         vim.g.mapleader = ' '
         vim.g.maplocalleader = ' '
 
-        -- Mirror of the runtime get_range wrapper in
-        -- lua/config/options.lua — muzzles the "range() on nil" crash
-        -- that hit nvim-treesitter master + nvim 0.12 during injection
-        -- query processing. CI's scratch config exercises the same
-        -- combo as prod, so the wrapper must be in place here too.
-        do
-          local ts = vim.treesitter
-          local orig = ts.get_range
-          ts.get_range = function(node, source, metadata)
-            if metadata and metadata.range then
-              if source == nil then
-                error('vim.treesitter.get_range: metadata.range requires source', 2)
-              end
-              return ts._range.add_bytes(source, metadata.range)
-            end
-            if node == nil then
-              return {{ 0, 0, 0, 0, 0, 0 }}
-            end
-            return orig(node, source, metadata)
-          end
-        end
+        -- Install the same get_range wrapper prod uses. Shared module
+        -- in lua/config/ts_shim.lua — CI + prod can't drift.
+        vim.opt.rtp:prepend('{REPO_ROOT}')
+        require('config.ts_shim').install()
 
         require('lazy').setup({{
             {{ 'nvim-lua/plenary.nvim' }},

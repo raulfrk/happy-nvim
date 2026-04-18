@@ -1,18 +1,11 @@
--- lua/tmux/popup.lua — wrappers around `tmux display-popup`
---
--- Every popup here blocks inside the inner cmd (lazygit, btop, shell)
--- for as long as the user stays in it — typically minutes. Blocking
--- nvim's main thread that long freezes every timer and autocmd
--- (idle watcher, macro-nudge, precognition, LSP). Use the async form
--- of vim.system so the popup attaches without blocking the editor.
+-- lua/tmux/popup.lua — wrappers around `tmux display-popup`.
+-- Async subprocess contract lives in lua/tmux/_popup.lua; we just
+-- bind the commands.
 local M = {}
-
-local function popup(cmd)
-  vim.system({ 'tmux', 'display-popup', '-E', '-w', '80%', '-h', '80%', cmd }, {}, function() end)
-end
+local _popup = require('tmux._popup')
 
 function M.lazygit()
-  popup('lazygit')
+  _popup.open('80%', '80%', 'lazygit')
 end
 
 function M.scratch()
@@ -21,15 +14,13 @@ function M.scratch()
   if root == '' then
     root = vim.fn.getcwd()
   end
-  vim.system(
-    { 'tmux', 'display-popup', '-E', '-w', '80%', '-h', '80%', '-d', root, 'zsh -l' },
-    {},
-    function() end
-  )
+  -- -d root handled via full arg list in _popup isn't exposed; pass the
+  -- shell to run with `cd` prefix so we don't need yet another param.
+  _popup.open('80%', '80%', 'cd ' .. vim.fn.shellescape(root) .. ' && zsh -l')
 end
 
 function M.btop()
-  popup('btop')
+  _popup.open('80%', '80%', 'btop')
 end
 
 -- Keymaps registered statically in lua/plugins/tmux.lua so which-key
