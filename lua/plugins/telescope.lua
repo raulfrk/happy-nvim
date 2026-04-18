@@ -26,6 +26,17 @@ return {
       { 'nvim-telescope/telescope-fzf-native.nvim', build = 'make' },
     },
     config = function()
+      -- Compat shim: telescope 0.1.x's previewer calls
+      -- require('nvim-treesitter.parsers').ft_to_lang(ft) but
+      -- nvim-treesitter master made parsers a plain config table — the
+      -- function is gone. Alias it here so the previewer doesn't crash.
+      -- Done in `config` so both modules are loadable; mutating the
+      -- table propagates because Lua require() caches by reference.
+      local ok, ts_parsers = pcall(require, 'nvim-treesitter.parsers')
+      if ok and not ts_parsers.ft_to_lang then
+        ts_parsers.ft_to_lang = vim.treesitter.language.get_lang
+      end
+
       local telescope = require('telescope')
       telescope.setup({
         defaults = {
