@@ -33,8 +33,26 @@ function M._build_ce_payload(rel_path, diags)
   return string.format('@%s\nDiagnostics:\n%s\n\nFix these.', rel_path, table.concat(bullets, '\n'))
 end
 
+-- Returns the buffer's path relative to cwd, or nil for nameless buffers
+-- (scratch, :enew, terminal). Callers that send @<path> to Claude must
+-- handle nil by notifying the user instead of sending `@.`. #26.
 local function buf_rel_path()
-  return vim.fn.fnamemodify(vim.api.nvim_buf_get_name(0), ':.')
+  local name = vim.api.nvim_buf_get_name(0)
+  if name == '' then
+    return nil
+  end
+  return vim.fn.fnamemodify(name, ':.')
+end
+
+local function guard_buf_rel_path()
+  local p = buf_rel_path()
+  if not p then
+    vim.notify(
+      'No file associated with this buffer. Save it first or use <leader>cs on a selection.',
+      vim.log.levels.WARN
+    )
+  end
+  return p
 end
 
 function M.open()
@@ -66,20 +84,32 @@ function M.open()
 end
 
 function M.send_file()
-  send.send_to_claude(M._build_cf_payload(buf_rel_path()))
+  local p = guard_buf_rel_path()
+  if not p then
+    return
+  end
+  send.send_to_claude(M._build_cf_payload(p))
 end
 
 function M.send_selection()
+  local p = guard_buf_rel_path()
+  if not p then
+    return
+  end
   local lstart = vim.fn.getpos("'<")[2]
   local lend = vim.fn.getpos("'>")[2]
   local lines = vim.api.nvim_buf_get_lines(0, lstart - 1, lend, false)
   local ft = vim.bo.filetype
-  send.send_to_claude(M._build_cs_payload(buf_rel_path(), lstart, lend, ft, lines))
+  send.send_to_claude(M._build_cs_payload(p, lstart, lend, ft, lines))
 end
 
 function M.send_errors()
+  local p = guard_buf_rel_path()
+  if not p then
+    return
+  end
   local diags = vim.diagnostic.get(0)
-  send.send_to_claude(M._build_ce_payload(buf_rel_path(), diags))
+  send.send_to_claude(M._build_ce_payload(p, diags))
 end
 
 -- Keymaps registered statically in lua/plugins/tmux.lua so which-key

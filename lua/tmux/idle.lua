@@ -143,6 +143,19 @@ end
 
 function M._poll_once(now)
   local sessions = require('tmux.sessions').list()
+  -- Prune orphan state entries whose sessions were killed externally
+  -- (e.g. another tmux client ran kill-session) — otherwise mark_busy
+  -- + subsequent poll chains could leak entries forever. #24.
+  local live = {}
+  for _, s in ipairs(sessions) do
+    live[s.name] = true
+  end
+  for name in pairs(states) do
+    if not live[name] then
+      states[name] = nil
+      last_alert_ts[name] = nil
+    end
+  end
   for _, s in ipairs(sessions) do
     local cap = vim.system({ 'tmux', 'capture-pane', '-p', '-t', s.name }, { text = true }):wait()
     if cap.code == 0 then
