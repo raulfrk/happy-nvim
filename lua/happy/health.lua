@@ -9,10 +9,17 @@ end
 function M.check()
   local h = vim.health
   h.start('happy-nvim: core')
-  if vim.fn.has('nvim-0.10') == 1 then
-    h.ok('Neovim >= 0.10')
+  if vim.fn.has('nvim-0.11') == 1 then
+    h.ok('Neovim >= 0.11')
   else
-    h.error('Neovim >= 0.10 required')
+    h.error('Neovim >= 0.11 required (happy-nvim now assumes 0.11 APIs)')
+  end
+  if vim.fn.exists('&winborder') == 1 then
+    h.ok('winborder option available')
+  else
+    h.warn(
+      'winborder option missing — some 0.11 plugins (noice, nui) error on float borders. Upgrade to a nvim build that includes the winborder PR.'
+    )
   end
 
   h.start('happy-nvim: local CLIs')
@@ -22,6 +29,20 @@ function M.check()
     else
       h.warn(cli .. ' not found (install for full feature set)')
     end
+  end
+
+  h.start('happy-nvim: tree-sitter')
+  if vim.fn.executable('tree-sitter') == 1 then
+    local ok, ver = exec({ 'tree-sitter', '--version' })
+    if ok then
+      h.ok('tree-sitter CLI: ' .. ver:gsub('%s+$', ''))
+    else
+      h.warn('tree-sitter CLI present but --version failed')
+    end
+  else
+    h.error(
+      'tree-sitter CLI not on $PATH — nvim-treesitter@main needs it to build parsers. Install: npm install -g tree-sitter-cli'
+    )
   end
 
   h.start('happy-nvim: tmux')
