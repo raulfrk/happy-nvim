@@ -98,16 +98,24 @@ function M.send_to_claude(payload)
       return false
     end
   end
-  vim.system(M._build_send_cmd(id, payload)):wait()
+  local send_res = vim.system(M._build_send_cmd(id, payload)):wait()
+  if send_res.code ~= 0 then
+    -- Pane likely died between resolve_target's alive-check and now.
+    -- Clear cached pane id so next send opens a fresh pane. #28.
+    vim.system({ 'tmux', 'set-option', '-w', '-u', '@claude_pane_id' }):wait()
+    vim.notify(
+      'Claude pane unreachable — cleared cached id. Press <leader>cc to open a new one.',
+      vim.log.levels.WARN
+    )
+    return false
+  end
   vim.system(M._build_enter_cmd(id)):wait()
   -- Mark the containing session busy so idle watcher doesn't flip back
-  -- to idle until output actually settles.
-  local ok_idle, idle = pcall(require, 'tmux.idle')
-  if ok_idle then
-    local name = M._session_of_pane(id)
-    if name then
-      idle.mark_busy(name)
-    end
+  -- to idle until output actually settles. idle is a core feature; direct
+  -- require (#25) instead of silent pcall so a missing module surfaces.
+  local name = M._session_of_pane(id)
+  if name then
+    require('tmux.idle').mark_busy(name)
   end
   return true
 end

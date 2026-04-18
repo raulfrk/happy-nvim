@@ -20,15 +20,19 @@ function M._build_ce_payload(rel_path, diags)
     -- vim.diagnostic emits 0-based lnum; user-visible line numbers are
     -- 1-based. Previous `d.lnum + (d.lnum == 0 and 0 or 0)` was a no-op
     -- (both branches = 0) — reported line N-1 to Claude (#22).
-    table.insert(
-      bullets,
-      string.format(
-        '- %s: %s (line %d)',
-        SEVERITY_NAMES[d.severity] or 'UNKNOWN',
-        d.message,
-        d.lnum + 1
-      )
-    )
+    local name = SEVERITY_NAMES[d.severity]
+    if not name then
+      -- Out-of-range severity — log once so :messages captures the
+      -- anomaly instead of silently mapping it to 'UNKNOWN'. #29.
+      vim.schedule(function()
+        vim.notify(
+          'happy-nvim: diagnostic with unknown severity=' .. tostring(d.severity),
+          vim.log.levels.DEBUG
+        )
+      end)
+      name = 'UNKNOWN'
+    end
+    table.insert(bullets, string.format('- %s: %s (line %d)', name, d.message, d.lnum + 1))
   end
   return string.format('@%s\nDiagnostics:\n%s\n\nFix these.', rel_path, table.concat(bullets, '\n'))
 end

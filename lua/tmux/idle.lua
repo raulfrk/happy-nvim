@@ -130,7 +130,19 @@ local states = {}
 
 local function apply_flip(session_name, idle)
   local val = idle and '1' or '0'
-  vim.system({ 'tmux', 'set-option', '-t', session_name, '@claude_idle', val }):wait()
+  -- Surface tmux failures at DEBUG level so :messages shows why the
+  -- status bar / picker badges stopped updating (e.g. session killed
+  -- mid-flip). Don't WARN — apply_flip runs on every 1s poll tick and
+  -- the user can't act on it. #27.
+  local so = vim.system({ 'tmux', 'set-option', '-t', session_name, '@claude_idle', val }):wait()
+  if so.code ~= 0 then
+    vim.schedule(function()
+      vim.notify(
+        'tmux set-option @claude_idle failed for ' .. session_name .. ': ' .. (so.stderr or ''),
+        vim.log.levels.DEBUG
+      )
+    end)
+  end
   vim.system({ 'tmux', 'refresh-client', '-S' }):wait()
   if idle then
     local now = os.time()
