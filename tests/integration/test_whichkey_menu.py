@@ -30,20 +30,37 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _write_scratch(cfg_dir: Path) -> Path:
-    """Minimal config: lazy + which-key with real group registrations + dummy keymaps."""
+    """Minimal config: lazy + which-key with real group registrations + dummy keymaps.
+
+    Diagnoses #16 flake: prior version silently proceeded past a failed
+    git clone, leaving `require('lazy')` to return `true` (boolean from
+    partial module file) — subsequent `.setup(...)` raised
+    "attempt to index a boolean" and tanked the whole test. Now we check
+    the clone exit code, verify the require returned a table, and error
+    loudly with diagnostic info if either fails.
+    """
     cfg_dir.mkdir(parents=True, exist_ok=True)
     init = cfg_dir / "init.lua"
     init.write_text(textwrap.dedent(f"""
         local data = vim.fn.stdpath('data')
         local lazypath = data .. '/lazy/lazy.nvim'
         if not vim.uv.fs_stat(lazypath) then
-          vim.fn.system({{
+          local out = vim.fn.system({{
             'git', 'clone', '--filter=blob:none',
             'https://github.com/folke/lazy.nvim.git',
             '--branch=stable', lazypath,
           }})
+          if vim.v.shell_error ~= 0 then
+            error('lazy.nvim clone failed (exit=' .. vim.v.shell_error
+              .. '): ' .. out)
+          end
         end
         vim.opt.rtp:prepend(lazypath)
+        local ok, lazy = pcall(require, 'lazy')
+        if not ok or type(lazy) ~= 'table' then
+          error('require(lazy) failed or returned non-table: ok='
+            .. tostring(ok) .. ' value=' .. vim.inspect(lazy))
+        end
         vim.g.mapleader = ' '
         vim.g.maplocalleader = ' '
         -- Dummy keymaps so which-key has real entries to group
@@ -53,7 +70,7 @@ def _write_scratch(cfg_dir: Path) -> Path:
         vim.keymap.set('n', '<leader>cc', '<nop>', {{ desc = 'Claude pane' }})
         vim.keymap.set('n', '<leader>tt', '<nop>', {{ desc = 'tmux popup' }})
         vim.keymap.set('n', '<leader>??', '<nop>', {{ desc = 'cheatsheet' }})
-        require('lazy').setup({{
+        lazy.setup({{
           {{
             'folke/which-key.nvim',
             lazy = false,
