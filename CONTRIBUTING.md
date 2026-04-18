@@ -64,6 +64,21 @@ under `docs/superpowers/plans/YYYY-MM-DD-<topic>.md`. Every plan that adds
 a new keymap / command / UI surface MUST include a "Manual Test Additions"
 section listing rows to append to `docs/manual-tests.md`.
 
+## Process rules
+
+Two rules every PR follows:
+
+1. **Every plan** under `docs/superpowers/plans/` ends with a
+   `## Manual Test Additions` section listing the rows the
+   implementing work appends to `docs/manual-tests.md`. Plans for
+   pure internal changes may state *"No manual test additions —
+   internal change."* instead.
+2. **Every user-visible change** (new keymap, new command, UI change)
+   appends a row to `docs/manual-tests.md` in the same commit.
+
+Full text lives in [`CLAUDE.md`](./CLAUDE.md) at the repo root (Claude
+Code auto-loads it for agent sessions; humans read it there too).
+
 ## Manual testing
 
 `docs/manual-tests.md` is the living checklist contributors walk through
