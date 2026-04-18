@@ -22,6 +22,23 @@ describe('vim.treesitter.get_range defensive wrapper', function()
     assert.are.same({ 0, 0, 0, 0, 0, 0 }, r)
   end)
 
+  it('returns an empty Range6 when node is a non-userdata table (stale ref)', function()
+    -- Regression: the real-world crash had `node` as something truthy
+    -- (a plain table or stale ref) so `node == nil` didn't catch it;
+    -- line 196 of runtime/treesitter.lua then hit "attempt to call
+    -- method 'range' (a nil value)". The type ~= 'userdata' guard
+    -- covers this.
+    local r = vim.treesitter.get_range({ not_a_node = true }, nil, nil)
+    assert.are.same({ 0, 0, 0, 0, 0, 0 }, r)
+  end)
+
+  it('returns an empty Range6 when original get_range throws', function()
+    -- Even if the arg LOOKS like a TSNode but range() errors for some
+    -- other reason, pcall catches it.
+    local r = vim.treesitter.get_range('not a node', nil, nil)
+    assert.are.same({ 0, 0, 0, 0, 0, 0 }, r)
+  end)
+
   it('respects metadata.range without needing a node', function()
     -- metadata.range path must still work; otherwise we break query
     -- directives that synthesize ranges from scratch.
