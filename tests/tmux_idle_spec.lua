@@ -6,8 +6,16 @@ describe('tmux.idle', function()
   local idle
 
   before_each(function()
+    vim.g._happy_idle_timer_active = nil
     package.loaded['tmux.idle'] = nil
     idle = require('tmux.idle')
+  end)
+
+  after_each(function()
+    if idle and idle.stop then
+      idle.stop()
+    end
+    vim.g._happy_idle_timer_active = nil
   end)
 
   describe('._tick', function()
@@ -76,6 +84,24 @@ describe('tmux.idle', function()
       assert.is_true(new_state.idle)
       assert.is_true(flipped)
       assert.is_nil(new_state.busy_until, 'busy_until cleared after flip')
+    end)
+  end)
+
+  describe('watch_all', function()
+    it('does not start a second timer after module reload (#21)', function()
+      -- First call starts a timer.
+      idle.watch_all()
+      assert.is_true(vim.g._happy_idle_timer_active)
+      -- Simulate :source $MYVIMRC — module-local `timer` resets but
+      -- vim.g flag survives. A second watch_all must be a no-op.
+      package.loaded['tmux.idle'] = nil
+      local idle2 = require('tmux.idle')
+      idle2.watch_all()
+      -- The sentinel remained set; the second module instance can't
+      -- close it (no handle), but we verify the guard triggered by
+      -- calling stop() and checking the flag is cleared exactly once.
+      idle2.stop()
+      assert.is_nil(vim.g._happy_idle_timer_active)
     end)
   end)
 

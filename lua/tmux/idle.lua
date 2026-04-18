@@ -170,12 +170,19 @@ function M.mark_busy(session_name)
   apply_flip(session_name, false)
 end
 
+-- Timer handle stashed in vim.g so a subsequent module reload
+-- (`:source $MYVIMRC`, `package.loaded['tmux.idle'] = nil` via tests)
+-- can't leak a second libuv timer w/ the re-entry guard fooled by a
+-- fresh `local timer = nil`. Module-local `timer` is also kept so we
+-- have the userdata handle for stop() without needing to store it in
+-- vim.g (which only holds a sentinel). See #21.
 local timer
 function M.watch_all()
-  if timer then
-    return -- already watching
+  if vim.g._happy_idle_timer_active or timer then
+    return -- already watching (this module or a prior incarnation)
   end
   timer = vim.uv.new_timer()
+  vim.g._happy_idle_timer_active = true
   timer:start(
     POLL_INTERVAL_MS,
     POLL_INTERVAL_MS,
@@ -191,6 +198,7 @@ function M.stop()
     timer:close()
     timer = nil
   end
+  vim.g._happy_idle_timer_active = nil
   states = {}
   last_alert_ts = {}
 end
