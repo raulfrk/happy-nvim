@@ -184,6 +184,55 @@ events if you use one). The session name (`cc-<repo>-wt-<branch>`) matches
 what `<leader>cp` inside the worktree resolves to, so opening nvim there
 attaches to the pre-warmed instance instead of cold-starting Claude.
 
+## Working with Claude
+
+Two surfaces for Claude Code, pick per task:
+
+| Surface | Key | When to use |
+|---|---|---|
+| Split pane | `<leader>cc` | Long sessions; keep chat + code side-by-side. Per-nvim-window. |
+| Floating popup | `<leader>cp` | Quick questions; reclaim screen space by dismissing. Global per project. |
+
+### Keymap reference
+
+| Key | Action |
+|---|---|
+| `<leader>cc` | open/attach per-window pane (splits horizontally on first press) |
+| `<leader>cp` | toggle popup attached to `cc-<project>` session |
+| `<leader>cC` | kill + respawn the pane (fresh Claude) |
+| `<leader>cP` | kill + respawn the popup session (fresh Claude) |
+| `<leader>cl` | telescope picker of every `cc-*` session w/ idle-state icons |
+| `<leader>cn` | prompt for a slug → spawn a new `cc-<slug>` session in cwd |
+| `<leader>ck` | kill the current project's popup session (confirm) |
+| `<leader>cf` | send current file's path as `@path/to/file` to active surface |
+| `<leader>cs` | (visual mode) send selection as fenced code block w/ file:lineno header |
+| `<leader>ce` | send current buffer's LSP diagnostics + a "fix these" prompt |
+
+### Send routing
+
+`<leader>cf` / `<leader>cs` / `<leader>ce` auto-route in this priority:
+
+1. `@claude_pane_id` on the current nvim window (set by `<leader>cc`).
+2. The `cc-<current-project>` popup session's pane (set by `<leader>cp`).
+3. If neither exists: warn + no-op.
+
+You can have both open; pane wins when both are registered, so the
+chat you've been looking at gets the send.
+
+### Customizing popup size
+
+Default is 85% × 85% of the outer terminal. Override in your
+`init.lua` (or any file sourced after happy-nvim loads):
+
+```lua
+require('tmux.claude_popup').setup({
+  popup = { width = '70%', height = '80%' },
+})
+```
+
+Values are passed verbatim to `tmux display-popup -w / -h`, so absolute
+cell counts (e.g. `120`) work too.
+
 ## Multi-project notifications
 
 Each active Claude session carries a `@claude_idle` tmux option that flips to
