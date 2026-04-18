@@ -12,6 +12,7 @@ for any fail.
 - [ ] `tree-sitter --version` exists on $PATH
 - [ ] Terminal font is a Nerd Font (icons render, not boxes/?). If you see `?`, run `fc-list | grep -i 'nerd font'` — empty output = install per README Prerequisites.
 - [ ] `$SHELL` is zsh or bash
+- [ ] `bash scripts/assess.sh` runs to completion with `ASSESS: ALL LAYERS PASS`
 
 ## 1. Core editing
 
