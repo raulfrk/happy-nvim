@@ -59,3 +59,50 @@ def wait_for_pane(
 def send_keys(socket: str, target: str, *keys: str) -> None:
     """Send keys to a pane. Each arg is passed as-is to `tmux send-keys`."""
     tmx(socket, "send-keys", "-t", target, *keys)
+
+
+def assert_capture_equals(socket: str, target: str, expected_path) -> None:
+    """Assert pane capture matches a golden file; regen via UPDATE_GOLDEN=1.
+
+    On mismatch, raises AssertionError w/ a unified diff pointing at the
+    golden file so contributors can see what changed at a glance.
+
+    Parameters
+    ----------
+    socket : str
+        Tmux socket name (as passed to `tmx` / `capture_pane`).
+    target : str
+        Pane target (e.g. '%42' or session name).
+    expected_path : pathlib.Path
+        Path to the golden text file. Regen creates it if missing.
+
+    Environment
+    -----------
+    UPDATE_GOLDEN=1 → overwrite (or create) the golden file with the current
+    capture instead of asserting. Any other value is ignored.
+    """
+    import difflib
+    import os as _os
+    from pathlib import Path as _Path
+    actual = capture_pane(socket, target)
+    golden = _Path(expected_path)
+    if _os.environ.get("UPDATE_GOLDEN") == "1":
+        golden.parent.mkdir(parents=True, exist_ok=True)
+        golden.write_text(actual)
+        return
+    expected = golden.read_text() if golden.exists() else ""
+    if actual == expected:
+        return
+    diff = "\n".join(
+        difflib.unified_diff(
+            expected.splitlines(),
+            actual.splitlines(),
+            fromfile=str(golden),
+            tofile="<pane capture>",
+            lineterm="",
+        )
+    )
+    raise AssertionError(
+        f"capture does not match golden {golden}\n\n{diff}\n\n"
+        f"(regen: UPDATE_GOLDEN=1 python3 -m pytest ...)"
+    )
