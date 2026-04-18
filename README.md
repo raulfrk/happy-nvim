@@ -134,6 +134,27 @@ recognizable form.
 
 MIT — see `LICENSE`.
 
+### Worktrees: pre-warmed Claude per branch
+
+If you use `git worktree add` to keep multiple branches checked out, pair
+your create/remove commands with the provisioning helpers:
+
+```bash
+# After creating a worktree
+git worktree add ~/worktrees/myrepo/feat-x feat-x
+bash ~/.config/nvim/scripts/wt-claude-provision.sh ~/worktrees/myrepo/feat-x
+
+# Before removing one
+bash ~/.config/nvim/scripts/wt-claude-cleanup.sh ~/worktrees/myrepo/feat-x
+git worktree remove ~/worktrees/myrepo/feat-x
+```
+
+Either invoke the scripts manually, alias them, or hook them into your
+worktree wrapper (e.g. the `worktree` MCP plugin's post-create / pre-remove
+events if you use one). The session name (`cc-<repo>-wt-<branch>`) matches
+what `<leader>cp` inside the worktree resolves to, so opening nvim there
+attaches to the pre-warmed instance instead of cold-starting Claude.
+
 ## Multi-project notifications
 
 Each active Claude session carries a `@claude_idle` tmux option that flips to
