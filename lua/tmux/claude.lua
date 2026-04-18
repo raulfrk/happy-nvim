@@ -17,13 +17,16 @@ local SEVERITY_NAMES = { 'ERROR', 'WARN', 'INFO', 'HINT' }
 function M._build_ce_payload(rel_path, diags)
   local bullets = {}
   for _, d in ipairs(diags) do
+    -- vim.diagnostic emits 0-based lnum; user-visible line numbers are
+    -- 1-based. Previous `d.lnum + (d.lnum == 0 and 0 or 0)` was a no-op
+    -- (both branches = 0) — reported line N-1 to Claude (#22).
     table.insert(
       bullets,
       string.format(
         '- %s: %s (line %d)',
         SEVERITY_NAMES[d.severity] or 'UNKNOWN',
         d.message,
-        d.lnum + (d.lnum == 0 and 0 or 0)
+        d.lnum + 1
       )
     )
   end

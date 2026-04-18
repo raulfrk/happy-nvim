@@ -30,13 +30,24 @@ describe('tmux.claude', function()
     assert.is_false(p:find('```markdown') ~= nil)
   end)
 
-  it('_build_ce_payload includes diagnostics bullets', function()
+  it('_build_ce_payload includes diagnostics bullets w/ 1-based line numbers', function()
+    -- vim.diagnostic emits 0-based lnum; payload must report the
+    -- user-visible (1-based) line. #22 regression guard.
     local p = claude._build_ce_payload('src/foo.lua', {
       { severity = 1, message = 'undefined global', lnum = 5 },
       { severity = 2, message = 'unused var', lnum = 10 },
     })
     assert.is_true(p:find('@src/foo.lua') ~= nil)
     assert.is_true(p:find('undefined global') ~= nil)
-    assert.is_true(p:find('line 5') ~= nil)
+    assert.is_true(p:find('line 6') ~= nil) -- lnum 5 → line 6
+    assert.is_true(p:find('line 11') ~= nil) -- lnum 10 → line 11
+  end)
+
+  it('_build_ce_payload converts lnum=0 to line 1 (no line 0)', function()
+    local p = claude._build_ce_payload('src/foo.lua', {
+      { severity = 3, message = 'first line warn', lnum = 0 },
+    })
+    assert.is_true(p:find('line 1') ~= nil)
+    assert.is_false(p:find('line 0') ~= nil, 'must not emit `line 0`')
   end)
 end)
