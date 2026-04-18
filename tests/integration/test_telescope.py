@@ -41,22 +41,19 @@ def _write_scratch_config(cfg_dir: Path) -> None:
 
         require('lazy').setup({{
             {{ 'nvim-lua/plenary.nvim' }},
-            -- Closes CI gap #10: load nvim-treesitter alongside telescope so
-            -- the previewer's `pcall(require, 'nvim-treesitter.parsers')` and
-            -- `pcall(require, 'nvim-treesitter.configs')` paths exercise real
-            -- modules (matches production). Previously only telescope +
-            -- plenary were loaded; the legacy/1.0 API crash (ft_to_lang,
-            -- is_enabled) slipped past CI because those requires returned
-            -- early w/ ok_ts=false and telescope skipped treesitter_attach.
+            -- Load nvim-treesitter on `main` branch (matches prod in
+            -- lua/plugins/treesitter.lua). main's 1.0 API has no
+            -- parsers.ft_to_lang / configs.is_enabled — we muzzle those
+            -- in the telescope config below, mirroring the shim in
+            -- lua/plugins/telescope.lua. Without this, CI would miss
+            -- the legacy/1.0 mismatch that crashed production.
             {{
                 'nvim-treesitter/nvim-treesitter',
-                branch = 'master',
-                build = ':TSUpdate',
+                branch = 'main',
                 config = function()
-                    require('nvim-treesitter.configs').setup({{
-                        ensure_installed = {{ 'lua' }},
-                        highlight = {{ enable = true }},
-                    }})
+                    -- Skip ts.install on CI to avoid a slow tree-sitter-cli
+                    -- cold-install during the test; the previewer only needs
+                    -- the parsers module to exist + legacy-API shims below.
                 end,
             }},
             {{
@@ -67,6 +64,20 @@ def _write_scratch_config(cfg_dir: Path) -> None:
                     'nvim-treesitter/nvim-treesitter',
                 }},
                 config = function()
+                    -- Mirror of the prod shim in lua/plugins/telescope.lua:
+                    -- muzzle telescope 0.1.x's legacy-API requires against
+                    -- nvim-treesitter main's 1.0 module surface.
+                    local ok_p, ts_parsers = pcall(require, 'nvim-treesitter.parsers')
+                    if ok_p and type(ts_parsers) == 'table' and not ts_parsers.ft_to_lang then
+                        ts_parsers.ft_to_lang = vim.treesitter.language.get_lang
+                    end
+                    if not package.loaded['nvim-treesitter.configs'] then
+                        package.loaded['nvim-treesitter.configs'] = {{
+                            is_enabled = function() return false end,
+                            get_module = function() return {{}} end,
+                        }}
+                    end
+
                     local telescope = require('telescope')
                     telescope.setup({{}})
                     vim.keymap.set('n', '<leader>ff', function()
