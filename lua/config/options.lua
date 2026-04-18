@@ -25,7 +25,10 @@ do
   local orig = ts.get_range
   ts.get_range = function(node, source, metadata)
     if metadata and metadata.range then
-      return ts._range.add_bytes(assert(source), metadata.range)
+      if source == nil then
+        error('vim.treesitter.get_range: metadata.range requires source', 2)
+      end
+      return ts._range.add_bytes(source, metadata.range)
     end
     if node == nil then
       return { 0, 0, 0, 0, 0, 0 }
