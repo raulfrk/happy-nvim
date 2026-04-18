@@ -41,10 +41,31 @@ def _write_scratch_config(cfg_dir: Path) -> None:
 
         require('lazy').setup({{
             {{ 'nvim-lua/plenary.nvim' }},
+            -- Closes CI gap #10: load nvim-treesitter alongside telescope so
+            -- the previewer's `pcall(require, 'nvim-treesitter.parsers')` and
+            -- `pcall(require, 'nvim-treesitter.configs')` paths exercise real
+            -- modules (matches production). Previously only telescope +
+            -- plenary were loaded; the legacy/1.0 API crash (ft_to_lang,
+            -- is_enabled) slipped past CI because those requires returned
+            -- early w/ ok_ts=false and telescope skipped treesitter_attach.
+            {{
+                'nvim-treesitter/nvim-treesitter',
+                branch = 'master',
+                build = ':TSUpdate',
+                config = function()
+                    require('nvim-treesitter.configs').setup({{
+                        ensure_installed = {{ 'lua' }},
+                        highlight = {{ enable = true }},
+                    }})
+                end,
+            }},
             {{
                 'nvim-telescope/telescope.nvim',
                 branch = '0.1.x',
-                dependencies = {{ 'nvim-lua/plenary.nvim' }},
+                dependencies = {{
+                    'nvim-lua/plenary.nvim',
+                    'nvim-treesitter/nvim-treesitter',
+                }},
                 config = function()
                     local telescope = require('telescope')
                     telescope.setup({{}})
@@ -138,11 +159,17 @@ def test_telescope_find_files_opens_selected(
             f"expected active buffer beta.txt, not found in capture:\n{out_before}"
         )
 
-        # Regression guard: previewer must not crash with ft_to_lang
-        # (telescope 0.1.8 + nvim-treesitter master triggers this).
+        # Regression guard: previewer must not crash on treesitter API drift.
+        # Covers both ft_to_lang (nvim-treesitter.parsers) and is_enabled
+        # (nvim-treesitter.configs). With the scratch config now loading
+        # nvim-treesitter on `master` alongside telescope, this fixture
+        # actually exercises the path that broke production in 2026-04-18.
         out_after = capture_pane(tmux_socket, session)
         assert "ft_to_lang" not in out_after, (
             f"telescope previewer raised ft_to_lang error:\n{out_after}"
+        )
+        assert "is_enabled" not in out_after, (
+            f"telescope previewer raised is_enabled error:\n{out_after}"
         )
         assert "vim.schedule callback" not in out_after, (
             f"unexpected scheduler crash in telescope:\n{out_after}"
