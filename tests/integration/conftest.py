@@ -81,3 +81,7 @@ def tmux_socket() -> str:
     subprocess.run(["tmux", "-L", socket, "list-sessions"], capture_output=True)
     yield socket
     subprocess.run(["tmux", "-L", socket, "kill-server"], capture_output=True)
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "slow: tests that take >30s (cold Mason install)")
