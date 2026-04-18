@@ -69,22 +69,30 @@ function M.open()
   if not M.ensure() then
     return
   end
-  -- -E closes the popup when inner command exits; user detaches via prefix+d
-  sys({
-    'tmux',
-    'display-popup',
-    '-E',
-    '-w',
-    M._config.popup.width,
-    '-h',
-    M._config.popup.height,
-    'tmux attach -t ' .. session(),
-  })
-  -- User was just typing in there; treat as busy so badge clears
-  local ok_idle, idle = pcall(require, 'tmux.idle')
-  if ok_idle then
-    idle.mark_busy(session())
-  end
+  -- Async: blocking :wait() here freezes nvim's event loop for the popup's
+  -- lifetime, which starves idle.watch_all()'s vim.uv.timer — no flip
+  -- detection, no notification fires while the user is in the popup. The
+  -- callback form keeps the main thread responsive; mark_busy runs on
+  -- detach (subprocess exit). -E closes popup when inner cmd exits.
+  vim.system(
+    {
+      'tmux',
+      'display-popup',
+      '-E',
+      '-w',
+      M._config.popup.width,
+      '-h',
+      M._config.popup.height,
+      'tmux attach -t ' .. session(),
+    },
+    { text = true },
+    vim.schedule_wrap(function(_)
+      local ok_idle, idle = pcall(require, 'tmux.idle')
+      if ok_idle then
+        idle.mark_busy(session())
+      end
+    end)
+  )
 end
 
 function M.fresh()

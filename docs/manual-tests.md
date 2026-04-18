@@ -114,6 +114,7 @@ Requires a real reachable ssh host.
 - [ ] Desktop opt-in (requires `notify-send`/`osascript`): set `alert.desktop = true` → OS-level notification appears
 - [ ] Cooldown: trigger two flips in quick succession → only one notification
 - [ ] Focus-skip: stay in the `cc-*` pane → no notification fires
+- [ ] (CI-covered) `<leader>cp` popup: notification fires **while popup still open** (after Claude finishes output, without detaching first)
 
 ---
 
