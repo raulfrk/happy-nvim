@@ -106,6 +106,15 @@ Requires a real reachable ssh host.
 - [ ] `:checkhealth happy-nvim` — sections: core, local CLIs, tmux, mosh, ssh, XDG dirs, tree-sitter, winborder
 - [ ] No `ERROR:` lines (warnings on optional deps are OK)
 
+## 8. Idle alerts (Phase 3 follow-up)
+
+- [ ] (CI-covered) Open `:Telescope find_files`, navigate any file → no `ft_to_lang` error in `:messages`
+- [ ] (CI-covered) Idle alert: send prompt to a `cc-*` session from another tmux window. After Claude finishes, nvim shows `Claude (<slug>) idle` notification
+- [ ] Bell opt-in: set `alert.bell = true`, repeat above — terminal beep accompanies notify
+- [ ] Desktop opt-in (requires `notify-send`/`osascript`): set `alert.desktop = true` → OS-level notification appears
+- [ ] Cooldown: trigger two flips in quick succession → only one notification
+- [ ] Focus-skip: stay in the `cc-*` pane → no notification fires
+
 ---
 
-Last updated: coverage batch landed 2026-04-18 (coach, LSP/conform, remote/hosts, remote/grep, tmux-nav, whichkey).
+Last updated: idle-alert + telescope previewer fix landed 2026-04-18.

@@ -324,3 +324,23 @@ open projects:
 The `<leader>cl` picker shows the same state inline, so the status-bar
 snippet is optional — useful mainly when you want always-visible state
 without opening the picker.
+
+### Active alerts
+
+Beyond the passive status-bar badge, you can opt into push notifications
+when a session flips busy→idle. Configure in your nvim setup:
+
+```lua
+require('tmux').setup({
+  alert = {
+    notify        = true,   -- vim.notify on flip (default ON)
+    bell          = false,  -- terminal bell (\a)
+    desktop       = false,  -- notify-send (Linux) / osascript (macOS)
+    cooldown_secs = 10,     -- min seconds between alerts per session
+    skip_focused  = true,   -- don't alert if you're in that session
+  },
+})
+```
+
+`vim.notify` integrates with `noice.nvim` automatically. `desktop` requires
+`notify-send` (Linux) or `osascript` (macOS) on `$PATH`.
