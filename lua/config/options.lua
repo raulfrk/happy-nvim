@@ -2,6 +2,38 @@
 -- Option tweaks. termguicolors is set in plugins/colorscheme.lua BEFORE the
 -- theme loads (per spec BUG-3 fix).
 
+-- Defensive wrapper around vim.treesitter.get_range.
+--
+-- Root cause (nvim 0.12.1, 2026-04-18): runtime/lua/vim/treesitter.lua:196
+-- unconditionally calls `node:range(true)` after metadata.range / .offset
+-- fallthrough. With nvim-treesitter master's injection queries on certain
+-- languages, a capture can produce a nil `node` alongside a truthy but
+-- non-informative `metadata` table, crashing the async parse loop
+-- (languagetree.lua:215 inside tcall). Stack trace on the user's nvim:
+--
+--   languagetree.lua:596: tcall(parse, ...)
+--   languagetree.lua:215: local r = { f(...) }
+--   treesitter.lua:196: return { node:range(true) }
+--     -> attempt to call method 'range' (a nil value)
+--
+-- Wrap get_range so nil nodes yield an empty Range6 instead of
+-- crashing. The highlighter skips empty ranges silently. Upstream
+-- can safely restore the direct call when the injection query contract
+-- is tightened; this wrapper is a no-op in the happy path.
+do
+  local ts = vim.treesitter
+  local orig = ts.get_range
+  ts.get_range = function(node, source, metadata)
+    if metadata and metadata.range then
+      return ts._range.add_bytes(assert(source), metadata.range)
+    end
+    if node == nil then
+      return { 0, 0, 0, 0, 0, 0 }
+    end
+    return orig(node, source, metadata)
+  end
+end
+
 local o = vim.opt
 
 -- Line numbers

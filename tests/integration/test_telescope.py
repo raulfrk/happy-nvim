@@ -39,21 +39,39 @@ def _write_scratch_config(cfg_dir: Path) -> None:
         vim.g.mapleader = ' '
         vim.g.maplocalleader = ' '
 
+        -- Mirror of the runtime get_range wrapper in
+        -- lua/config/options.lua — muzzles the "range() on nil" crash
+        -- that hit nvim-treesitter master + nvim 0.12 during injection
+        -- query processing. CI's scratch config exercises the same
+        -- combo as prod, so the wrapper must be in place here too.
+        do
+          local ts = vim.treesitter
+          local orig = ts.get_range
+          ts.get_range = function(node, source, metadata)
+            if metadata and metadata.range then
+              return ts._range.add_bytes(assert(source), metadata.range)
+            end
+            if node == nil then
+              return {{ 0, 0, 0, 0, 0, 0 }}
+            end
+            return orig(node, source, metadata)
+          end
+        end
+
         require('lazy').setup({{
             {{ 'nvim-lua/plenary.nvim' }},
-            -- Load nvim-treesitter on `main` branch (matches prod in
-            -- lua/plugins/treesitter.lua). main's 1.0 API has no
-            -- parsers.ft_to_lang / configs.is_enabled — we muzzle those
-            -- in the telescope config below, mirroring the shim in
-            -- lua/plugins/telescope.lua. Without this, CI would miss
-            -- the legacy/1.0 mismatch that crashed production.
+            -- Load nvim-treesitter on `master` branch (matches prod in
+            -- lua/plugins/treesitter.lua). Legacy 0.x API gives telescope's
+            -- previewer the native parsers.ft_to_lang / configs.is_enabled
+            -- it expects — no shim needed in telescope config.
             {{
                 'nvim-treesitter/nvim-treesitter',
-                branch = 'main',
+                branch = 'master',
                 config = function()
-                    -- Skip ts.install on CI to avoid a slow tree-sitter-cli
-                    -- cold-install during the test; the previewer only needs
-                    -- the parsers module to exist + legacy-API shims below.
+                    require('nvim-treesitter.configs').setup({{
+                        ensure_installed = {{ 'lua' }},
+                        highlight = {{ enable = true }},
+                    }})
                 end,
             }},
             {{
@@ -64,20 +82,6 @@ def _write_scratch_config(cfg_dir: Path) -> None:
                     'nvim-treesitter/nvim-treesitter',
                 }},
                 config = function()
-                    -- Mirror of the prod shim in lua/plugins/telescope.lua:
-                    -- muzzle telescope 0.1.x's legacy-API requires against
-                    -- nvim-treesitter main's 1.0 module surface.
-                    local ok_p, ts_parsers = pcall(require, 'nvim-treesitter.parsers')
-                    if ok_p and type(ts_parsers) == 'table' and not ts_parsers.ft_to_lang then
-                        ts_parsers.ft_to_lang = vim.treesitter.language.get_lang
-                    end
-                    if not package.loaded['nvim-treesitter.configs'] then
-                        package.loaded['nvim-treesitter.configs'] = {{
-                            is_enabled = function() return false end,
-                            get_module = function() return {{}} end,
-                        }}
-                    end
-
                     local telescope = require('telescope')
                     telescope.setup({{}})
                     vim.keymap.set('n', '<leader>ff', function()
@@ -170,14 +174,17 @@ def test_telescope_find_files_opens_selected(
             f"expected active buffer beta.txt, not found in capture:\n{out_before}"
         )
 
-        # Regression guard: previewer must not crash on treesitter API drift.
-        # Covers both ft_to_lang (nvim-treesitter.parsers) and is_enabled
-        # (nvim-treesitter.configs). With the scratch config now loading
-        # nvim-treesitter on `master` alongside telescope, this fixture
-        # actually exercises the path that broke production in 2026-04-18.
+        # Regression guard: previewer must not crash on treesitter API drift
+        # or the 'range() on nil' injection-query bug (languagetree.lua:215).
+        # With the scratch config now loading nvim-treesitter on `master`
+        # alongside telescope 0.1.x AND installing the get_range wrapper
+        # inline, this fixture exercises the exact path that hit production.
         out_after = capture_pane(tmux_socket, session)
         assert "ft_to_lang" not in out_after, (
             f"telescope previewer raised ft_to_lang error:\n{out_after}"
+        )
+        assert "attempt to call method 'range'" not in out_after, (
+            f"treesitter get_range crash — wrapper in config/options.lua missing?\n{out_after}"
         )
         assert "is_enabled" not in out_after, (
             f"telescope previewer raised is_enabled error:\n{out_after}"
