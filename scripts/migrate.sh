@@ -33,17 +33,94 @@ Upgrade: https://github.com/neovim/neovim/releases/tag/stable
 Debian/Ubuntu: curl -L https://github.com/neovim/neovim/releases/download/stable/nvim-linux-x86_64.tar.gz -o /tmp/nvim.tar.gz && sudo tar -C /opt -xzf /tmp/nvim.tar.gz && sudo ln -sf /opt/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim"
 fi
 
-# 1b. Preflight — tree-sitter CLI required by nvim-treesitter@main for parser builds
-if ! command -v tree-sitter >/dev/null 2>&1; then
-  log "tree-sitter CLI not found — installing via npm-global"
+# 1b. Preflight — tree-sitter CLI required by nvim-treesitter@main for parser builds.
+#
+# Recent npm `tree-sitter-cli` (0.25+) ships a prebuilt binary linked against
+# GLIBC 2.39 (Ubuntu 24.04 build host). Hosts with older glibc (Debian 12
+# bookworm = 2.36, Ubuntu 22.04 = 2.35) get a crash:
+#
+#   /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.39' not found
+#
+# So: (a) verify the binary actually runs, don't just check $PATH, and
+# (b) on GLIBC mismatch, fall back through pinned older npm → cargo.
+ts_works() {
+  command -v tree-sitter >/dev/null 2>&1 && tree-sitter --version >/dev/null 2>&1
+}
+
+ts_fail_reason() {
+  command -v tree-sitter >/dev/null 2>&1 || { echo "not on \$PATH"; return 0; }
+  local out
+  out=$(tree-sitter --version 2>&1 || true)
+  printf '%s' "$out" | tr '\n' ' ' | sed 's/[[:space:]]\+$//'
+  return 0
+}
+
+npm_install_ts() {
+  local spec="$1"
+  npm install -g "$spec" 2>/dev/null && return 0
+  warn "global npm install ($spec) failed — retrying with sudo"
+  sudo npm install -g "$spec"
+}
+
+# Probe host glibc. Empty string = couldn't detect, treat optimistically.
+host_glibc=$(ldd --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+' | head -1 || true)
+glibc_ge_239() {
+  [[ -z "$host_glibc" ]] && return 0
+  local major minor
+  IFS=. read -r major minor <<<"$host_glibc"
+  [[ -z "${major:-}" || -z "${minor:-}" ]] && return 0
+  (( major > 2 )) && return 0
+  (( major == 2 && minor >= 39 )) && return 0
+  return 1
+}
+
+if ts_works; then
+  :
+else
+  if command -v tree-sitter >/dev/null 2>&1; then
+    warn "existing tree-sitter unusable: $(ts_fail_reason)"
+  fi
   if ! command -v npm >/dev/null 2>&1; then
     die "npm not found. Install Node.js (includes npm) then re-run: https://nodejs.org/en/download"
   fi
-  if ! npm install -g tree-sitter-cli 2>/dev/null; then
-    warn "global npm install failed — retrying with sudo"
-    sudo npm install -g tree-sitter-cli || die "npm install -g tree-sitter-cli failed. Install manually: cargo install tree-sitter-cli"
+
+  # If host glibc is old, skip the wasted "latest" install and go straight to
+  # the last version built against Ubuntu 22.04 (glibc 2.35).
+  if glibc_ge_239; then
+    log "installing tree-sitter CLI via npm (latest)"
+    npm_install_ts tree-sitter-cli || warn "npm install tree-sitter-cli failed"
+  else
+    log "host glibc=${host_glibc} < 2.39 — pinning tree-sitter-cli@0.24 (latest npm prebuild needs glibc 2.39)"
+    npm_install_ts 'tree-sitter-cli@0.24' || warn "npm install tree-sitter-cli@0.24 failed"
   fi
-  command -v tree-sitter >/dev/null 2>&1 || die "tree-sitter still not on \$PATH after install. Check npm global prefix: npm config get prefix"
+
+  # If the primary install path didn't produce a working binary, try the
+  # pinned older npm version (covers the case where latest is still ABI-newer
+  # than our probe suggested).
+  if ! ts_works && glibc_ge_239; then
+    warn "latest tree-sitter unusable ($(ts_fail_reason)); trying pinned tree-sitter-cli@0.24"
+    npm_install_ts 'tree-sitter-cli@0.24' || warn "pinned npm install failed"
+  fi
+
+  # Last resort: build from source with cargo.
+  if ! ts_works; then
+    if command -v cargo >/dev/null 2>&1; then
+      warn "npm prebuilds unusable ($(ts_fail_reason)); building from source via cargo"
+      cargo install tree-sitter-cli || warn "cargo install tree-sitter-cli failed"
+    else
+      warn "cargo not found — skipping source build fallback"
+    fi
+  fi
+
+  if ! ts_works; then
+    die "could not install a working tree-sitter CLI.
+  host: $(ldd --version 2>/dev/null | head -1)
+  last error: $(ts_fail_reason)
+  fixes:
+    1. install Rust (https://rustup.rs) then: cargo install tree-sitter-cli
+    2. download the static binary from https://github.com/tree-sitter/tree-sitter/releases
+       and place it on \$PATH as 'tree-sitter'"
+  fi
 fi
 log "tree-sitter: $(tree-sitter --version 2>&1 | head -1)"
 

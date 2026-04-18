@@ -33,11 +33,22 @@ function M.check()
 
   h.start('happy-nvim: tree-sitter')
   if vim.fn.executable('tree-sitter') == 1 then
-    local ok, ver = exec({ 'tree-sitter', '--version' })
+    local ok, stdout, stderr = exec({ 'tree-sitter', '--version' })
     if ok then
-      h.ok('tree-sitter CLI: ' .. ver:gsub('%s+$', ''))
+      h.ok('tree-sitter CLI: ' .. stdout:gsub('%s+$', ''))
     else
-      h.warn('tree-sitter CLI present but --version failed')
+      local msg = ((stderr ~= '' and stderr) or stdout or ''):gsub('%s+$', '')
+      if msg:match('GLIBC') then
+        -- npm tree-sitter-cli 0.25+ prebuilds link against glibc 2.39.
+        -- Debian 12 / Ubuntu 22.04 hosts crash here.
+        h.error(
+          'tree-sitter CLI unusable (GLIBC mismatch): '
+            .. msg
+            .. '\nFix: `npm install -g tree-sitter-cli@0.24` or `cargo install tree-sitter-cli`.'
+        )
+      else
+        h.warn('tree-sitter CLI present but --version failed: ' .. msg)
+      end
     end
   else
     h.error(
