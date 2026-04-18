@@ -27,6 +27,7 @@ for any fail.
 - [ ] `<Space>h1/2/3` — buffer switches to marked files
 - [ ] `<Space>u` — undotree opens
 - [ ] `<Space>gs` — fugitive :Git opens in a split
+- [ ] `<Space>ff` then arrow-navigate through the preview — no `attempt to call field 'ft_to_lang' (a nil value)` error in `:messages`
 
 ## 2. Macro-nudge
 
