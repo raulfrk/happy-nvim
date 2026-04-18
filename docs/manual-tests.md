@@ -16,7 +16,7 @@ for any fail.
 ## 1. Core editing
 
 - [ ] Open a .lua file — syntax colors render (vim regex or treesitter)
-- [ ] Open a .py file — LSP attaches within 2s (`:LspInfo` shows client)
+- [ ] (CI-covered, slow — Mason cold install) Open a .py file — LSP attaches within 2s (`:LspInfo` shows client); `:w` reformats via ruff_format (conform.nvim, single format only — BUG-1 regression)
 - [ ] Edit .lua, `:w` — stylua formats automatically (conform.nvim)
 - [ ] `<Space>fh` — telescope harpoon list
 - [ ] (CI-covered, but worth spot-checking locally) `<Space>ff` in a repo with >50 files — telescope sorts by relevance, not alphabet
@@ -29,8 +29,8 @@ for any fail.
 ## 2. Macro-nudge
 
 - [ ] Open nvim cold — alpha dashboard shows "Tip: <keys>" in footer
-- [ ] Press `<Space>` alone, wait 400ms — which-key popup lists groups (find/git/LSP/diag/harpoon/ssh/Claude/tmux/cheatsheet)
-- [ ] Press `<Space>?` — cheatsheet picker opens
+- [ ] (CI-covered) Press `<Space>` alone, wait 400ms — which-key popup lists groups (find/git/LSP/diag/harpoon/ssh/Claude/tmux/cheatsheet)
+- [ ] (CI-covered) Press `<Space>?` — cheatsheet picker opens
 - [ ] Type `jjjj` in normal mode — hardtime warns about j-repeat
 - [ ] Move cursor to a word — precognition overlays show motion targets (w/b/e etc)
 
@@ -44,6 +44,9 @@ for any fail.
 ## 4. Tmux + Claude
 
 Requires `claude` CLI on $PATH + `$TMUX` set.
+
+- [ ] (CI-covered) `<C-h/j/k/l>` in nvim at window edge — moves active tmux pane (vim-tmux-navigator)
+
 
 - [ ] `<Space>cc` — spawns a horizontal tmux pane w/ claude. Conversation persists on repeat press.
 - [ ] `<Space>cf` — sends current file as `@path`. Pane shows the ref.
@@ -79,13 +82,13 @@ Open 2 tmux panes, nvim in each, one in /path/to/repoA, other in /path/to/repoB.
 
 Requires a real reachable ssh host.
 
-- [ ] `<Space>ss` — frecency host picker. Most-recent host at top.
+- [ ] (CI-covered, partial — only data layer via remote.hosts._merge+_parse_ssh_config, not picker UI) `<Space>ss` — frecency host picker. Most-recent host at top.
 - [ ] Pick a host — drops you into ssh session via tmux split.
 - [ ] Back in nvim: `<Space>sd` — remote dir picker (zoxide-like, cached 7d).
 - [ ] `<Space>sB` then enter `user@host:/etc/hostname` — opens as scp:// buffer.
 - [ ] Try to open a binary remote file via `<Space>sB` — refuses w/ "looks binary (MIME: binary)" notify.
 - [ ] `<Space>sO` then reopen — loads anyway (override).
-- [ ] `<Space>sg` then enter pattern — runs `nice ionice ssh <host> 'grep -EIlH ...'` — results in quickfix.
+- [ ] (CI-covered, partial — _build_cmd only, not network) `<Space>sg` then enter pattern — runs `nice ionice ssh <host> 'grep -EIlH ...'` — results in quickfix.
 - [ ] `:HappyHostsPrune` — reports pruned hosts count.
 
 ## 7. Health
@@ -95,4 +98,4 @@ Requires a real reachable ssh host.
 
 ---
 
-Last updated: phase 3 (idle notifications) landed 2026-04-17.
+Last updated: coverage batch landed 2026-04-18 (coach, LSP/conform, remote/hosts, remote/grep, tmux-nav, whichkey).
