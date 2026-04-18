@@ -289,6 +289,16 @@ Example output:
 ASSESS: ALL LAYERS PASS
 ```
 
+Inside nvim:
+
+```vim
+:HappyAssess
+```
+
+Opens a scratch buffer streaming `assess.sh` output line-by-line. `:bd`
+to close when done. Useful for quick verification after edits without
+leaving the editor.
+
 ### 4. Manual checklist — `docs/manual-tests.md`
 
 For features CI can't exercise (real `claude` CLI, real SSH, host clipboard,
