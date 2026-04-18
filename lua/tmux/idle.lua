@@ -95,7 +95,7 @@ local function fire_alert(session)
     vim.notify(msg, vim.log.levels.INFO, { title = 'Claude' })
   end
   if opts.bell then
-    io.stderr:write('\a')
+    vim.api.nvim_out_write('\a')
   end
   if opts.desktop then
     if vim.fn.executable('notify-send') == 1 then
