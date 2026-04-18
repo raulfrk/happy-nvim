@@ -2,6 +2,17 @@
 -- Option tweaks. termguicolors is set in plugins/colorscheme.lua BEFORE the
 -- theme loads (per spec BUG-3 fix).
 
+-- Compat shim: vim.treesitter.language.ft_to_lang was removed in nvim 0.11
+-- (replaced by get_lang). telescope.nvim 0.1.8 still calls the old name from
+-- its previewer, which crashes when you highlight a previewable file.
+-- Alias it back; `= x or y` makes this a no-op if upstream ever restores
+-- ft_to_lang natively. Remove once telescope ships a release that uses
+-- get_lang directly.
+if vim.treesitter and vim.treesitter.language then
+  vim.treesitter.language.ft_to_lang = vim.treesitter.language.ft_to_lang
+    or vim.treesitter.language.get_lang
+end
+
 local o = vim.opt
 
 -- Line numbers
