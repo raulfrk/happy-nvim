@@ -32,6 +32,12 @@ end
 
 -- Pure: advance one session's state based on the latest capture + now.
 -- Returns (new_state, flipped) where flipped==true iff idle value changed.
+--
+-- `busy_until` guards against a premature idle flip after mark_busy
+-- when the pane output happens to be already stable (e.g. user sent a
+-- prompt that claude doesn't produce new output for). Without it,
+-- stable_since restarts but the next DEBOUNCE_SECS fires a false
+-- "idle" alert. #20.
 function M._tick(state, capture, now)
   local h = M._hash(capture or '')
   if state.last_hash == nil then
@@ -39,7 +45,9 @@ function M._tick(state, capture, now)
       last_hash = h,
       stable_since = now,
       idle = false,
-    }, false
+      busy_until = state.busy_until,
+    },
+      false
   end
   if h ~= state.last_hash then
     local was_idle = state.idle
@@ -47,15 +55,19 @@ function M._tick(state, capture, now)
       last_hash = h,
       stable_since = now,
       idle = false,
-    }, was_idle -- flipped iff we were idle before
+      busy_until = state.busy_until,
+    },
+      was_idle -- flipped iff we were idle before
   end
-  -- Output stable. Check debounce.
+  -- Output stable. Check debounce + busy-grace window.
   local stable_for = now - state.stable_since
-  if stable_for >= DEBOUNCE_SECS and not state.idle then
+  local grace_active = state.busy_until and now < state.busy_until
+  if stable_for >= DEBOUNCE_SECS and not state.idle and not grace_active then
     return {
       last_hash = state.last_hash,
       stable_since = state.stable_since,
       idle = true,
+      busy_until = nil,
     },
       true
   end
@@ -145,12 +157,15 @@ function M._poll_once(now)
 end
 
 -- Mark a session as busy immediately (invoked from send.lua + claude_popup
--- on any user-driven activity — resets stable_since so idle can only flip
--- back after DEBOUNCE_SECS of quiet).
+-- on any user-driven activity — resets stable_since AND sets a short
+-- busy-grace window so `_tick` won't flip back to idle even if the pane
+-- output happens to stay stable after the user activity. See #20.
 function M.mark_busy(session_name)
+  local now = os.time()
   local state = states[session_name] or {}
-  state.stable_since = os.time()
+  state.stable_since = now
   state.idle = false
+  state.busy_until = now + DEBOUNCE_SECS + 3 -- grace: ~5s total
   states[session_name] = state
   apply_flip(session_name, false)
 end

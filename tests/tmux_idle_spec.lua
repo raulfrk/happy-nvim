@@ -49,6 +49,34 @@ describe('tmux.idle', function()
       assert.is_true(new_state.idle)
       assert.is_false(flipped) -- no state change
     end)
+
+    it('does NOT flip to idle while busy_until is active (#20)', function()
+      -- mark_busy sets stable_since = now AND busy_until = now + ~5s.
+      -- If output is stable AND debounce elapses AND busy_until still
+      -- in the future, we must NOT flip.
+      local state = {
+        last_hash = 'hash-same',
+        stable_since = 1000,
+        idle = false,
+        busy_until = 1010,
+      }
+      local new_state, flipped = idle._tick(state, 'same', 1003) -- 3s stable, within busy grace
+      assert.is_false(new_state.idle)
+      assert.is_false(flipped, 'busy_until should suppress premature idle flip')
+    end)
+
+    it('flips to idle once busy_until elapses (#20)', function()
+      local state = {
+        last_hash = 'hash-same',
+        stable_since = 1000,
+        idle = false,
+        busy_until = 1005,
+      }
+      local new_state, flipped = idle._tick(state, 'same', 1010) -- past busy_until
+      assert.is_true(new_state.idle)
+      assert.is_true(flipped)
+      assert.is_nil(new_state.busy_until, 'busy_until cleared after flip')
+    end)
   end)
 
   describe('._hash', function()
