@@ -88,7 +88,10 @@ function M.pick_for_host(host)
           if not sel then
             return
           end
-          vim.system({ 'tmux', 'send-keys', '-l', 'cd ' .. sel[1] }):wait()
+          -- Shellquote the selected path so `cd` parses it as a single
+          -- arg even if it contains spaces or `'`. #23.
+          local sq = require('remote.util').shellquote(sel[1])
+          vim.system({ 'tmux', 'send-keys', '-l', 'cd ' .. sq }):wait()
           vim.system({ 'tmux', 'send-keys', 'Enter' }):wait()
         end)
         return true

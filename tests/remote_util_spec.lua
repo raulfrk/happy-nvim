@@ -30,6 +30,24 @@ describe('remote.util.run', function()
     assert.is_truthy(res.stderr:match('timeout'))
   end)
 
+  it('shellquote wraps simple input in single quotes', function()
+    assert.are.equal("'hello'", util.shellquote('hello'))
+    assert.are.equal("'/tmp/dir'", util.shellquote('/tmp/dir'))
+  end)
+
+  it('shellquote handles paths with spaces (#23)', function()
+    assert.are.equal("'my dir'", util.shellquote('my dir'))
+  end)
+
+  it("shellquote escapes embedded ' via the POSIX '\\'' dance (#19)", function()
+    -- input: a'b  →  output: 'a'\''b'
+    assert.are.equal("'a'\\''b'", util.shellquote("a'b"))
+  end)
+
+  it('shellquote handles empty string', function()
+    assert.are.equal("''", util.shellquote(''))
+  end)
+
   it('keeps vim.uv.timer firing during the wait (non-blocking contract)', function()
     -- The whole point of this helper: blocking :wait() would starve
     -- the timer. If this test ever fails, the helper regressed back
