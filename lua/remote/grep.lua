@@ -92,7 +92,10 @@ function M.prompt()
     return
   end
   local cmd = M._build_cmd(host, opts)
-  local res = vim.system(cmd, { text = true }):wait()
+  -- The remote `timeout N` caps server-side runtime; give util.run a
+  -- bit more headroom (+5s) so the outer wait exceeds the remote cap
+  -- and exit code 124 comes from the remote (not our wait giving up).
+  local res = require('remote.util').run(cmd, { text = true }, (opts.timeout + 5) * 1000)
   if res.code == 124 then
     vim.notify('grep timed out. Narrow path/glob or pass +timeout=60', vim.log.levels.WARN)
     return

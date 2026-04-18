@@ -55,11 +55,13 @@ function M._is_binary_mime(out)
 end
 
 local function check_remote_binary(host, rpath)
-  local mime = vim.system(M._build_mime_probe_cmd(host, rpath), { text = true }):wait()
+  -- Event-loop-friendly ssh calls; see lua/remote/util.lua for rationale.
+  local run = require('remote.util').run
+  local mime = run(M._build_mime_probe_cmd(host, rpath), { text = true })
   if mime.code == 0 and M._is_binary_mime(mime.stdout or '') then
     return true, 'binary'
   end
-  local sz = vim.system(M._build_size_probe_cmd(host, rpath), { text = true }):wait()
+  local sz = run(M._build_size_probe_cmd(host, rpath), { text = true })
   if sz.code == 0 then
     local n = tonumber((sz.stdout or ''):gsub('%s+', '')) or 0
     if n > MAX_SIZE then
@@ -125,7 +127,7 @@ function M.find()
     return
   end
   local cmd = { 'ssh', host, string.format("find %s -name '%s' 2>/dev/null", path, pat) }
-  local res = vim.system(cmd, { text = true }):wait()
+  local res = require('remote.util').run(cmd, { text = true })
   if res.code ~= 0 then
     vim.notify('ssh ' .. host .. ' failed: ' .. (res.stderr or ''), vim.log.levels.ERROR)
     return

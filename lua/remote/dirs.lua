@@ -47,7 +47,10 @@ function M._write_cache(host, dirs)
 end
 
 function M._fetch_sync(host)
-  local res = vim.system(M._build_find_cmd(host), { text = true }):wait()
+  -- Uses remote.util.run (callback-form vim.system + vim.wait) so the
+  -- idle watcher + other timer-driven features stay live during the
+  -- ssh find, which can take several seconds over slow links.
+  local res = require('remote.util').run(M._build_find_cmd(host), { text = true })
   if res.code ~= 0 then
     vim.notify('remote dir fetch failed: ' .. (res.stderr or ''), vim.log.levels.WARN)
     return {}

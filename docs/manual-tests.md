@@ -115,7 +115,9 @@ Requires a real reachable ssh host.
 - [ ] Cooldown: trigger two flips in quick succession → only one notification
 - [ ] Focus-skip: stay in the `cc-*` pane → no notification fires
 - [ ] (CI-covered) `<leader>cp` popup: notification fires **while popup still open** (after Claude finishes output, without detaching first)
+- [ ] (CI-covered) `remote.util.run` keeps `vim.uv.timer` firing during an ssh subprocess
+- [ ] `<leader>sd` / `<leader>sg` over real ssh: idle notifications from active `cc-*` sessions still fire during the find/grep
 
 ---
 
-Last updated: idle-alert + telescope previewer fix landed 2026-04-18.
+Last updated: remote async conversion (#17) landed 2026-04-18.
