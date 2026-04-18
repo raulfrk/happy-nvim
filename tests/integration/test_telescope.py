@@ -137,5 +137,15 @@ def test_telescope_find_files_opens_selected(
         assert _has_beta(out_before), (
             f"expected active buffer beta.txt, not found in capture:\n{out_before}"
         )
+
+        # Regression guard: previewer must not crash with ft_to_lang
+        # (telescope 0.1.8 + nvim-treesitter master triggers this).
+        out_after = capture_pane(tmux_socket, session)
+        assert "ft_to_lang" not in out_after, (
+            f"telescope previewer raised ft_to_lang error:\n{out_after}"
+        )
+        assert "vim.schedule callback" not in out_after, (
+            f"unexpected scheduler crash in telescope:\n{out_after}"
+        )
     finally:
         tmx(tmux_socket, "kill-session", "-t", session, check=False)
