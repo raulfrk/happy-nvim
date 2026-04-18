@@ -7,8 +7,23 @@
 local M = {}
 local project = require('tmux.project')
 
-local POPUP_W = '85%'
-local POPUP_H = '85%'
+-- Defaults; override via M.setup({ popup = { width = ..., height = ... } }).
+M._config = {
+  popup = {
+    width = '85%',
+    height = '85%',
+  },
+}
+
+-- Merge user overrides shallowly into _config. Backwards-compatible: if
+-- setup is never called, popup dimensions stay at the defaults above.
+function M.setup(opts)
+  opts = opts or {}
+  if opts.popup then
+    M._config.popup.width = opts.popup.width or M._config.popup.width
+    M._config.popup.height = opts.popup.height or M._config.popup.height
+  end
+end
 
 local function sys(args)
   return vim.system(args, { text = true }):wait()
@@ -60,9 +75,9 @@ function M.open()
     'display-popup',
     '-E',
     '-w',
-    POPUP_W,
+    M._config.popup.width,
     '-h',
-    POPUP_H,
+    M._config.popup.height,
     'tmux attach -t ' .. session(),
   })
   -- User was just typing in there; treat as busy so badge clears
