@@ -81,6 +81,7 @@ Open 2 tmux panes, nvim in each, one in /path/to/repoA, other in /path/to/repoB.
 - [ ] Let A reply + go idle ≥2s. `<Space>cl` picker shows `✓ <A>`.
 - [ ] Send new input to A. `<Space>cl` shows `⟳ <A>`.
 - [ ] If tmux status-right snippet from README is installed: status bar shows per-project badges.
+- [ ] (CI-covered) Three projects open in parallel tmux panes. Let all three go idle — `<Space>cl` picker shows `✓` on all three. Send input to project A only. Picker shows `⟳ A / ✓ B / ✓ C`.
 
 - [ ] `git worktree add` a branch + run `wt-claude-provision.sh <path>` — `tmux ls` shows new `cc-<repo>-wt-<branch>` session
 - [ ] Open nvim in that worktree → `<Space>cp` attaches to the pre-warmed session (history empty since just-spawned, but no cold-start delay)
