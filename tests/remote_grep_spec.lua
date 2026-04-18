@@ -66,4 +66,30 @@ describe('remote.grep', function()
     assert.is_false(joined:find('node_modules') ~= nil)
     assert.is_false(joined:find('venv') ~= nil)
   end)
+
+  it('_build_cmd shell-escapes single quotes in user input (#19)', function()
+    -- Pattern w/ `'; rm -rf /; echo '` must be POSIX-quoted so the
+    -- remote shell sees a single literal argument, not two commands.
+    local cmd = grep._build_cmd('myhost', {
+      pattern = "foo'; rm -rf ~; echo '",
+      path = '/',
+      glob = '*',
+      timeout = 30,
+      size = '10M',
+    })
+    local joined = table.concat(cmd, ' ')
+    -- Must contain the escaped-quote dance '\'' (close, escaped-quote, reopen).
+    assert.is_truthy(
+      joined:find("'\\''"),
+      'expected `' .. "'\\''" .. '` in escaped pattern; got: ' .. joined
+    )
+    -- Must NOT contain a bare `rm -rf ~` that would execute remotely.
+    -- After proper quoting, the rm is inside a quoted literal, not a separate cmd.
+    -- Sanity check: still sends one -exec grep, not multiple.
+    local grep_count = 0
+    for _ in joined:gmatch('grep %-') do
+      grep_count = grep_count + 1
+    end
+    assert.are.equal(1, grep_count, 'multiple grep tokens suggest quote escape broke')
+  end)
 end)

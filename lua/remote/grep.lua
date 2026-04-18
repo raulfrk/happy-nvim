@@ -61,16 +61,21 @@ function M._build_cmd(host, opts)
     size_part = '-size -' .. opts.size
   end
 
+  -- User-supplied opts.path / opts.glob / opts.pattern get interpolated
+  -- into a command the remote shell will parse. Wrap each in a POSIX
+  -- single-quoted literal so `'` in user input can't break out and run
+  -- arbitrary remote code (see #19 audit finding).
+  local sq = require('remote.util').shellquote
   local remote = string.format(
-    "nice -n19 ionice -c3 timeout %d find %s -type f %s %s -name '%s' -exec grep -%s%sIlH '%s' {} + 2>/dev/null",
+    'nice -n19 ionice -c3 timeout %d find %s -type f %s %s -name %s -exec grep -%s%sIlH %s {} + 2>/dev/null',
     opts.timeout,
-    opts.path,
+    sq(opts.path),
     size_part,
     table.concat(filters, ' '),
-    opts.glob,
+    sq(opts.glob),
     grep_flag,
     case,
-    opts.pattern
+    sq(opts.pattern)
   )
   return { 'ssh', host, remote }
 end

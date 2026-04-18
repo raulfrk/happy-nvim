@@ -16,7 +16,13 @@ describe('remote.browse', function()
 
   it('_build_mime_probe_cmd builds ssh file -b --mime-encoding cmd', function()
     local cmd = browse._build_mime_probe_cmd('myhost', '/etc/passwd')
-    assert.are.same({ 'ssh', 'myhost', 'file -b --mime-encoding /etc/passwd' }, cmd)
+    assert.are.same({ 'ssh', 'myhost', "file -b --mime-encoding '/etc/passwd'" }, cmd)
+  end)
+
+  it('_build_mime_probe_cmd shell-escapes rpath with single quote (#19)', function()
+    local cmd = browse._build_mime_probe_cmd('myhost', "/tmp/a'b")
+    -- Escape dance: 'a'\''b'
+    assert.is_truthy(cmd[3]:find("/tmp/a'\\''b"), 'expected escaped quote; got: ' .. cmd[3])
   end)
 
   it('_is_binary_mime detects "binary" encoding', function()

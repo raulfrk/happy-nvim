@@ -43,11 +43,13 @@ function M._fast_path_ext(path)
 end
 
 function M._build_mime_probe_cmd(host, rpath)
-  return { 'ssh', host, 'file -b --mime-encoding ' .. rpath }
+  local q = require('remote.util').shellquote(rpath)
+  return { 'ssh', host, 'file -b --mime-encoding ' .. q }
 end
 
 function M._build_size_probe_cmd(host, rpath)
-  return { 'ssh', host, 'stat -c %s ' .. rpath .. ' 2>/dev/null || wc -c < ' .. rpath }
+  local q = require('remote.util').shellquote(rpath)
+  return { 'ssh', host, 'stat -c %s ' .. q .. ' 2>/dev/null || wc -c < ' .. q }
 end
 
 function M._is_binary_mime(out)
@@ -126,7 +128,8 @@ function M.find()
   if pat == '' then
     return
   end
-  local cmd = { 'ssh', host, string.format("find %s -name '%s' 2>/dev/null", path, pat) }
+  local sq = require('remote.util').shellquote
+  local cmd = { 'ssh', host, string.format('find %s -name %s 2>/dev/null', sq(path), sq(pat)) }
   local res = require('remote.util').run(cmd, { text = true })
   if res.code ~= 0 then
     vim.notify('ssh ' .. host .. ' failed: ' .. (res.stderr or ''), vim.log.levels.ERROR)

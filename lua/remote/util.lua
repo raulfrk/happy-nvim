@@ -41,4 +41,20 @@ function M.run(cmd, opts, timeout_ms)
   return result
 end
 
+--- Escape a string for interpolation inside a POSIX-shell single-quoted
+--- context. Wraps input in `'...'` with any embedded `'` replaced by the
+--- standard `'\''` dance (close, escaped-quote, reopen). Callers should
+--- embed the result directly — the returned string is already quoted.
+---
+--- Needed for the remote.grep / remote.browse commands where user
+--- input is interpolated into an ssh-executed shell command: the
+--- remote shell parses what ssh sends it, so any `'` in the input
+--- breaks out of our wrapping quotes (command injection).
+---
+--- @param s string
+--- @return string -- quoted, e.g. `shellquote("a'b") == "'a'\\''b'"`
+function M.shellquote(s)
+  return "'" .. s:gsub("'", "'\\''") .. "'"
+end
+
 return M
