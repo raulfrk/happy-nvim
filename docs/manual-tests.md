@@ -60,6 +60,12 @@ Requires `claude` CLI on $PATH + `$TMUX` set.
 - [ ] `<Space>cl` then `<C-x>` on an entry — session killed, picker refreshes.
 - [ ] `<Space>cn` then type `sidebar` — spawns `cc-sidebar` session + popup.
 - [ ] `<Space>ck` — confirm Yes — current project's session killed.
+- [ ] `:checkhealth happy-nvim` section "claude integration" shows:
+  - `ok claude CLI found on $PATH`
+  - `ok tmux X.Y supports display-popup -E` (X.Y >= 3.2)
+  - Per-window pane state (ok/info/warn)
+  - Per-project popup session state (ok/info)
+- [ ] After `require('tmux.claude_popup').setup({ popup = { width = '50%' } })` in init.lua, `<Space>cp` opens a narrower popup
 - [ ] Inside Claude popup, press `Ctrl-C` mid-reply — claude interrupts the current generation, popup stays open, history preserved
 - [ ] `<Space>cp` again — same conversation visible (Ctrl-C didn't tear it down)
 
