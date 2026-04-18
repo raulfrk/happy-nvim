@@ -69,6 +69,56 @@ function M.check()
     end
   end
 
+  h.start('happy-nvim: claude integration')
+  if vim.fn.executable('claude') == 1 then
+    h.ok('claude CLI found on $PATH')
+  else
+    h.warn('claude CLI not on $PATH — <leader>c* tmux integration inoperable')
+  end
+  if vim.env.TMUX == nil or vim.env.TMUX == '' then
+    h.info('not in tmux — skipping session probes')
+  else
+    local _, tmux_ver = exec({ 'tmux', '-V' })
+    local major, minor = (tmux_ver or ''):match('(%d+)%.(%d+)')
+    if major and minor then
+      local m = tonumber(major)
+      local n = tonumber(minor)
+      if m > 3 or (m == 3 and n >= 2) then
+        h.ok('tmux ' .. major .. '.' .. minor .. ' supports display-popup -E')
+      else
+        h.error('tmux ' .. major .. '.' .. minor .. ' < 3.2 — <leader>cp popup requires 3.2+')
+      end
+    end
+    -- Per-window pane registration
+    local _, pane = exec({ 'tmux', 'show-option', '-w', '-v', '-q', '@claude_pane_id' })
+    pane = (pane or ''):gsub('%s+$', '')
+    if pane == '' then
+      h.info('no @claude_pane_id on this window (press <leader>cc to create one)')
+    else
+      local alive, _ = exec({ 'tmux', 'list-panes', '-t', pane })
+      if alive then
+        h.ok('claude pane registered + alive: ' .. pane)
+      else
+        h.warn('claude pane ' .. pane .. ' registered but no longer exists (stale)')
+      end
+    end
+    -- Per-project popup session
+    local ok, project = pcall(require, 'tmux.project')
+    if ok then
+      local session = project.session_name()
+      local has, _ = exec({ 'tmux', 'has-session', '-t', session })
+      if has then
+        h.ok("claude-popup session '" .. session .. "' running")
+      else
+        h.info(
+          'no claude-popup session for this project yet (press <leader>cp to start one, target: '
+            .. session
+            .. ')'
+        )
+      end
+    end
+  end
+
   h.start('happy-nvim: mosh')
   if vim.env.MOSH_CONNECTION ~= nil then
     local ok, ver = exec({ 'mosh', '--version' })
