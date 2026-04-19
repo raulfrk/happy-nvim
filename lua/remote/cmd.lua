@@ -25,24 +25,28 @@ function M._stream_to_scratch(host, cmd)
   vim.cmd('sbuffer ' .. buf)
 
   local handle
-  handle = vim.system({ 'ssh', host, cmd }, {
-    text = true,
-    stdout = function(_, data)
-      if data then
-        append_to_buf(buf, vim.split(data, '\n', { trimempty = true }))
-      end
-    end,
-    stderr = function(_, data)
-      if data then
-        local prefixed = vim.tbl_map(function(l)
-          return 'ERR: ' .. l
-        end, vim.split(data, '\n', { trimempty = true }))
-        append_to_buf(buf, prefixed)
-      end
-    end,
-  }, vim.schedule_wrap(function(out)
-    append_to_buf(buf, { ('--- exit %d ---'):format(out.code) })
-  end))
+  handle = vim.system(
+    { 'ssh', host, cmd },
+    {
+      text = true,
+      stdout = function(_, data)
+        if data then
+          append_to_buf(buf, vim.split(data, '\n', { trimempty = true }))
+        end
+      end,
+      stderr = function(_, data)
+        if data then
+          local prefixed = vim.tbl_map(function(l)
+            return 'ERR: ' .. l
+          end, vim.split(data, '\n', { trimempty = true }))
+          append_to_buf(buf, prefixed)
+        end
+      end,
+    },
+    vim.schedule_wrap(function(out)
+      append_to_buf(buf, { ('--- exit %d ---'):format(out.code) })
+    end)
+  )
 
   vim.keymap.set('n', '<C-c>', function()
     if handle and not handle:is_closing() then

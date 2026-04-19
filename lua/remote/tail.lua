@@ -31,24 +31,28 @@ function M._stream_tail(host, path)
   local remote_cmd = 'tail -F ' .. shell_escape(path)
 
   local handle
-  handle = vim.system({ 'ssh', host, remote_cmd }, {
-    text = true,
-    stdout = function(_, data)
-      if data then
-        append_to_buf(buf, vim.split(data, '\n', { trimempty = true }))
-      end
-    end,
-    stderr = function(_, data)
-      if data then
-        local prefixed = vim.tbl_map(function(l)
-          return 'ERR: ' .. l
-        end, vim.split(data, '\n', { trimempty = true }))
-        append_to_buf(buf, prefixed)
-      end
-    end,
-  }, vim.schedule_wrap(function(out)
-    append_to_buf(buf, { ('--- tail ended (exit %d) ---'):format(out.code) })
-  end))
+  handle = vim.system(
+    { 'ssh', host, remote_cmd },
+    {
+      text = true,
+      stdout = function(_, data)
+        if data then
+          append_to_buf(buf, vim.split(data, '\n', { trimempty = true }))
+        end
+      end,
+      stderr = function(_, data)
+        if data then
+          local prefixed = vim.tbl_map(function(l)
+            return 'ERR: ' .. l
+          end, vim.split(data, '\n', { trimempty = true }))
+          append_to_buf(buf, prefixed)
+        end
+      end,
+    },
+    vim.schedule_wrap(function(out)
+      append_to_buf(buf, { ('--- tail ended (exit %d) ---'):format(out.code) })
+    end)
+  )
 
   vim.keymap.set('n', 'q', function()
     if handle and not handle:is_closing() then
