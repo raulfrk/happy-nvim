@@ -8,7 +8,13 @@ describe('happy.hub.sources.project_rows', function()
       list = function()
         return {
           { id = 'proj-a', kind = 'local', path = '/p/a', last_opened = os.time() - 60 },
-          { id = 'proj-b', kind = 'remote', host = 'h', path = '/p/b', last_opened = os.time() - 120 },
+          {
+            id = 'proj-b',
+            kind = 'remote',
+            host = 'h',
+            path = '/p/b',
+            last_opened = os.time() - 120,
+          },
         }
       end,
       score = function(id)

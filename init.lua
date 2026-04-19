@@ -30,9 +30,15 @@ try_require('config.lazy')
 -- Modules load after lazy so they can use telescope etc.
 -- VimEnter fires reliably after lazy bootstraps; LazyDone race-prone.
 local function setup_happy_modules()
-  for _, mod in
-    ipairs({ 'coach', 'clipboard', 'tmux', 'remote', 'happy.assess', 'happy.projects', 'happy.hub' })
-  do
+  for _, mod in ipairs({
+    'coach',
+    'clipboard',
+    'tmux',
+    'remote',
+    'happy.assess',
+    'happy.projects',
+    'happy.hub',
+  }) do
     local ok, m = pcall(require, mod)
     if ok and type(m.setup) == 'function' then
       local ok_setup, err = pcall(m.setup)
