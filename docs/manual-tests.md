@@ -144,6 +144,15 @@ Requires a real reachable ssh host.
 - [ ] Cold `nvim` open on a `.lua` file → no `w / b / e / $ / ^ / %` overlays. `<leader>?p` toggles them on. Second `<leader>?p` toggles off (30.7)
 - [ ] `<leader>?` cheatsheet opens → type `remote`, `claude`, `projects`, `capture`, `undo`, or `git` → results show the respective keybindings (30.9, 30.10, 30.11)
 
+## 12. Fast remote ops (SP3)
+
+- [ ] Inside tmux+mosh+nvim, yank a line (yy) → host (outside mosh) `Cmd+V` / `Ctrl+V` pastes the line (30.2)
+- [ ] `:HappyCheckClipboard` emits a `HAPPY-CLIPBOARD-TEST-<ts>` payload; paste in host terminal shows that exact string (30.2)
+- [ ] Fresh install (no ~/.ssh/config, empty frecency DB) → `<leader>ss` shows `[+ Add host]` entry. `<Enter>` prompts for `user@host[:port]`, submission adds + re-opens picker (30.8)
+- [ ] `<leader>sc` → enter `df -h` → pick host → scratch buffer streams output, ends with `--- exit 0 ---`. `q` closes; `<C-c>` during a long cmd kills + shows non-zero exit
+- [ ] `<leader>sT` → pick host → enter `/var/log/syslog` → scratch streams log lines live. `q` closes + kills tail
+- [ ] `<leader>sf` → pick host → `/etc` → telescope lists files up to 6 levels deep. `<Enter>` opens selected as `scp://`
+
 ---
 
-Last updated: UX micro-batch landed 2026-04-19.
+Last updated: SP3 fast remote ops landed 2026-04-19.
