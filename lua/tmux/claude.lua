@@ -189,10 +189,7 @@ function M.open_scratch()
   local name = scratch_name_for(id)
   local effective_cwd = scratch_cwd_for(id, cwd)
   local res = vim
-    .system(
-      { 'tmux', 'new-session', '-d', '-s', name, '-c', effective_cwd, 'claude' },
-      { text = true }
-    )
+    .system({ 'tmux', 'new-session', '-d', '-s', name, '-c', effective_cwd, 'claude' }, { text = true })
     :wait()
   if res.code ~= 0 then
     vim.notify('failed to spawn scratch claude: ' .. (res.stderr or ''), vim.log.levels.ERROR)
