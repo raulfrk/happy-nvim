@@ -144,6 +144,19 @@ function M.update(id, patch)
   save()
 end
 
+function M.score(id)
+  load()
+  local entry = state.projects[id]; if not entry then return 0 end
+  local age_hours = (os.time() - (entry.last_opened or 0)) / 3600
+  return (entry.open_count or 1) * math.exp(-age_hours * 0.05)
+end
+
+function M.sorted_by_score()
+  local entries = M.list()
+  table.sort(entries, function(a, b) return M.score(a.id) > M.score(b.id) end)
+  return entries
+end
+
 -- test hooks
 function M._set_path_for_test(p) state_path = p end
 function M._reset_for_test() state = nil; state_path = default_path end
