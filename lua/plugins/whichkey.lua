@@ -20,6 +20,8 @@ return {
       { '<leader>c', group = 'Claude (tmux pane)', icon = '󰚩' },
       { '<leader>t', group = 'tmux popups', icon = '' },
       { '<leader>?', group = 'cheatsheet / coach', icon = '󰋖' },
+      { '<leader>P', group = 'project', icon = '' },
+      { '<leader>C', group = 'capture (remote→claude)', icon = '󰆏' },
     })
 
     -- Visual-mode text-object hints (spec §5.1.5)
