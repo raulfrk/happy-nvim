@@ -10,6 +10,8 @@ local M = {}
 
 local default_path = vim.fn.stdpath('data') .. '/happy/projects.json'
 local state_path = default_path
+local env_override = os.getenv('HAPPY_PROJECTS_JSON_OVERRIDE')
+if env_override and env_override ~= '' then state_path = env_override end
 local state = nil
 
 local function slugify(s)
