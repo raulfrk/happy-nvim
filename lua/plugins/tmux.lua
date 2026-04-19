@@ -90,6 +90,13 @@ return {
       end,
       desc = "Claude: kill current project's session",
     },
+    {
+      '<leader>cq',
+      function()
+        require('tmux.claude').open_scratch_guarded()
+      end,
+      desc = 'Claude: quick scratch popup (single-shot)',
+    },
     { '<leader>tg', lazy_cmd('tmux.popup', 'lazygit'), desc = 'tmux popup: lazygit' },
     { '<leader>tt', lazy_cmd('tmux.popup', 'scratch'), desc = 'tmux popup: shell (git root)' },
     { '<leader>tb', lazy_cmd('tmux.popup', 'btop'), desc = 'tmux popup: btop' },

@@ -152,4 +152,9 @@ return {
     desc = 'quick-pivot hub: projects + hosts + sessions (SP2)',
     category = 'projects',
   },
+  {
+    keys = '<leader>cq',
+    desc = 'quick scratch claude popup (ephemeral, single-shot, SP4)',
+    category = 'claude',
+  },
 }

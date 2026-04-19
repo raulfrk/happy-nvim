@@ -160,6 +160,13 @@ Requires a real reachable ssh host.
 - [ ] Pivot to a host entry → same effect as `<leader>ss` → Enter (ssh in tmux split).
 - [ ] Sessions whose slug matches a registered project are suppressed from the session source (no duplicate row).
 
+## 14. Parallel claude (SP4)
+
+- [ ] `<leader>cq` opens a fresh claude popup. Session named `cc-<id>-scratch-<ts>`.
+- [ ] Long-running `cc-<id>` session keeps running (unaffected).
+- [ ] Popup close (`ctrl-d` / `prefix+d`) → `tmux ls` shows scratch session gone.
+- [ ] Remote project: `<leader>cq` uses sandbox dir (claude inherits `.claude/settings.local.json`).
+
 ---
 
-Last updated: SP2 quick-pivot hub landed 2026-04-19.
+Last updated: SP4 parallel claude landed 2026-04-19.
