@@ -7,6 +7,37 @@
 local M = {}
 local project = require('tmux.project')
 
+-- Registry + remote modules are optional at require-time so this file stays
+-- importable in headless/test contexts that stub them out. Both are loaded
+-- lazily in `target_cwd_for_current_project` below.
+local _registry_ok, _registry = pcall(require, 'happy.projects.registry')
+local _remote_ok, _remote = pcall(require, 'happy.projects.remote')
+
+-- Resolve the cwd claude should run in for the current project:
+--   * remote project → `remote.sandbox_dir(id)` (the on-disk sandbox dir
+--     whose `.claude/settings.local.json` denies fs-escape + network),
+--   * local project → `vim.fn.getcwd()` (unchanged behavior).
+--
+-- `registry.add({ kind = 'local', path = cwd })` is dedup-safe: if the cwd
+-- was previously registered (local or remote) the existing id is returned;
+-- otherwise a new local entry is created. Matches the auto-register pattern
+-- in `lua/tmux/claude.lua`.
+local function target_cwd_for_current_project()
+  local cwd = vim.fn.getcwd()
+  if not (_registry_ok and _remote_ok) then
+    return cwd
+  end
+  local ok, id = pcall(_registry.add, { kind = 'local', path = cwd })
+  if not ok or not id then
+    return cwd
+  end
+  local entry = _registry.get(id)
+  if entry and entry.kind == 'remote' then
+    return _remote.sandbox_dir(id)
+  end
+  return cwd
+end
+
 -- Defaults; override via M.setup({ popup = { width = ..., height = ... } }).
 M._config = {
   popup = {
@@ -41,7 +72,10 @@ function M.ensure()
   if M.exists() then
     return true
   end
-  local cwd = vim.fn.expand('%:p:h')
+  -- For remote projects, claude must run inside the sandbox dir so it
+  -- inherits the `.claude/settings.local.json` deny list (no fs escape,
+  -- no outbound network). For local projects, behavior is unchanged.
+  local cwd = target_cwd_for_current_project()
   if cwd == '' then
     cwd = vim.fn.getcwd()
   end
