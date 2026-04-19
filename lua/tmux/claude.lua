@@ -1,6 +1,18 @@
 -- lua/tmux/claude.lua — <leader>c* commands
 local M = {}
 local send = require('tmux.send')
+local registry = require('happy.projects.registry')
+
+local function session_for_cwd()
+  local cwd = vim.fn.getcwd()
+  local id = registry.add({ kind = 'local', path = cwd })
+  return id, 'cc-' .. id, cwd
+end
+
+local function session_alive(name)
+  vim.fn.system({ 'tmux', 'has-session', '-t', name })
+  return vim.v.shell_error == 0
+end
 
 function M._build_cf_payload(rel_path)
   return '@' .. rel_path
@@ -60,30 +72,30 @@ local function guard_buf_rel_path()
 end
 
 function M.open()
-  local id = send.get_claude_pane_id()
-  if id then
-    vim.system({ 'tmux', 'select-pane', '-t', id }):wait()
-    return
+  local id, session, cwd = session_for_cwd()
+  if not session_alive(session) then
+    local res = vim
+      .system({
+        'tmux', 'new-session', '-d', '-s', session, '-c', cwd, 'claude',
+      }, { text = true })
+      :wait()
+    if res.code ~= 0 then
+      vim.notify(
+        'failed to spawn Claude session: ' .. (res.stderr or ''),
+        vim.log.levels.ERROR
+      )
+      return
+    end
+    vim.system({ 'tmux', 'set-env', '-t', session, 'HAPPY_PROJECT_PATH', cwd }):wait()
   end
-  local cwd = vim.fn.expand('%:p:h')
-  local res = vim
-    .system({
-      'tmux',
-      'split-window',
-      '-h',
-      '-c',
-      cwd,
-      '-P',
-      '-F',
-      '#{pane_id}',
-      'claude',
-    }, { text = true })
-    :wait()
-  if res.code == 0 then
-    local new_id = (res.stdout or ''):gsub('%s+$', '')
-    send.set_claude_pane_id(new_id)
+  registry.touch(id)
+  if vim.env.TMUX and vim.env.TMUX ~= '' then
+    vim.system({ 'tmux', 'switch-client', '-t', session }):wait()
   else
-    vim.notify('failed to spawn Claude pane: ' .. (res.stderr or ''), vim.log.levels.ERROR)
+    vim.notify(
+      session .. ' is up. Attach via `tmux attach -t ' .. session .. '`.',
+      vim.log.levels.INFO
+    )
   end
 end
 
@@ -139,12 +151,9 @@ function M.open_fresh_guarded()
   if not guard() then
     return
   end
-  -- Kill existing pane if registered for the current nvim window.
-  -- `send` is already required at the top of this file.
-  local id = send.get_claude_pane_id()
-  if id then
-    vim.system({ 'tmux', 'kill-pane', '-t', id }):wait()
-    vim.system({ 'tmux', 'set-option', '-w', '-u', '@claude_pane_id' }):wait()
+  local _, session, _ = session_for_cwd()
+  if session_alive(session) then
+    vim.system({ 'tmux', 'kill-session', '-t', session }):wait()
   end
   M.open()
 end

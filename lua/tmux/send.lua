@@ -47,13 +47,32 @@ function M.set_claude_pane_id(id)
 end
 
 -- Resolve which Claude surface should receive sends. Priority:
--- 1. @claude_pane_id on the current nvim window (set by <leader>cc)
--- 2. claude-happy tmux session's pane (set by <leader>cp)
+-- 1. Per-project session `cc-<id>` (or `remote-<id>`) derived from cwd via
+--    the registry — if alive, return its first pane id. (Set by <leader>cc.)
+-- 2. claude-happy tmux popup session's pane (set by <leader>cp)
 -- 3. nil — caller should notify the user
 function M.resolve_target()
-  local id = M.get_claude_pane_id()
-  if id then
-    return id, 'pane'
+  local reg_ok, pane = pcall(function()
+    local registry = require('happy.projects.registry')
+    local cwd = vim.fn.getcwd()
+    local id = registry.add({ kind = 'local', path = cwd })
+    local entry = registry.get(id)
+    if not entry then return nil end
+    local session = (entry.kind == 'remote' and 'remote-' or 'cc-') .. id
+    local has = vim
+      .system({ 'tmux', 'has-session', '-t', session }, { text = true })
+      :wait()
+    if has.code ~= 0 then return nil end
+    local res = vim
+      .system(
+        { 'tmux', 'list-panes', '-t', session, '-F', '#{pane_id}' },
+        { text = true }
+      )
+      :wait()
+    return (res.stdout or ''):match('^(%S+)')
+  end)
+  if reg_ok and pane then
+    return pane, 'session'
   end
   local ok, popup = pcall(require, 'tmux.claude_popup')
   if ok then
