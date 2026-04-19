@@ -40,6 +40,35 @@ function M.setup(opts)
   vim.keymap.set('n', '<leader>Pp', function() picker.open({ title = 'Peek' }) end,
     { desc = 'Peek project' })
 
+  local function current_remote_id()
+    local reg = require('happy.projects.registry')
+    local id = reg.add({ kind = 'local', path = vim.fn.getcwd() })
+    local entry = reg.get(id)
+    if entry.kind ~= 'remote' then
+      vim.notify('current project is not remote', vim.log.levels.WARN); return nil
+    end
+    return id
+  end
+
+  vim.keymap.set('n', '<leader>Cc', function()
+    local id = current_remote_id()
+    if id then require('happy.projects.remote').capture(id) end
+  end, { desc = 'Capture remote pane -> claude sandbox' })
+  vim.keymap.set('n', '<leader>Ct', function()
+    local id = current_remote_id()
+    if id then require('happy.projects.remote').toggle_tail(id) end
+  end, { desc = 'Toggle remote tail-pipe to sandbox' })
+  vim.keymap.set('n', '<leader>Cl', function()
+    local id = current_remote_id(); if not id then return end
+    vim.ui.input({ prompt = 'Remote path to pull: ' }, function(p)
+      if p and p ~= '' then require('happy.projects.remote').pull(id, p) end
+    end)
+  end, { desc = 'Pull remote file to sandbox (scp)' })
+  vim.keymap.set('v', '<leader>Cs', function()
+    local id = current_remote_id()
+    if id then require('happy.projects.remote').send_selection(id) end
+  end, { desc = 'Send visual selection to sandbox' })
+
   -- commands
   vim.api.nvim_create_user_command('HappyProjectAdd', function(args)
     local input = args.args
