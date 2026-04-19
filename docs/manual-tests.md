@@ -117,6 +117,21 @@ Requires a real reachable ssh host.
 - [ ] (CI-covered) `remote.util.run` keeps `vim.uv.timer` firing during an ssh subprocess
 - [ ] `<leader>sd` / `<leader>sg` over real ssh: idle notifications from active `cc-*` sessions still fire during the find/grep
 
+## 9. Multi-project cockpit (SP1)
+
+- [ ] `<leader>P` shows all registered projects, local + remote
+- [ ] `<C-a>` in picker w/ a path → new local project, picker refreshes
+- [ ] `<C-a>` in picker w/ `prod01:/var/log` → new remote project, ssh pane opens
+- [ ] Pivot to remote project, `<leader>cp` → sandboxed claude popup opens (cwd = sandbox dir)
+- [ ] In sandboxed claude, ask "run `ls` on the host" → refuses (Bash(ssh*) denied)
+- [ ] In sandboxed claude, ask "open my ssh config" → refuses (Read outside sandbox denied)
+- [ ] `<leader>Cc` after `ls -la` in remote pane → sandboxed claude sees output
+- [ ] `<leader>Pp` on a non-active project → scrollback tail shown, no pivot
+- [ ] `<leader>cc` in a second tmux pane (different cwd) → creates a distinct `cc-<id>` session (bug 30.3 fixed; UX change: switch-client full attach, no inline split)
+- [ ] `:HappyWtProvision <path>` and `:HappyWtCleanup <path>` stream output in a scratch buffer, no `:wait()` hang
+- [ ] Lualine shows `✓ <id>` (idle) / `⟳ <id>` (working) / `✗ <id>` (dead) per registered project
+- [ ] `<leader>Pa` prompts and registers a new project (`/path` → local, `host:path` → remote)
+
 ---
 
-Last updated: remote async conversion (#17) landed 2026-04-18.
+Last updated: multi-project cockpit (SP1) landed 2026-04-19.
