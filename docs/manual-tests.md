@@ -138,6 +138,12 @@ Requires a real reachable ssh host.
 - [ ] Open a `.lua` file on a machine without `selene` installed → no error in `:messages` (30.5)
 - [ ] `:HappyLspInfo` in a buffer with an attached client lists `• <name> (id=<n>, root=<path>)`; in a buffer with no client, prints "No LSP clients attached to this buffer." (30.6)
 
+## 11. UX micro-batch 2026-04-19
+
+- [ ] `<leader>ck` with active claude session → Y/N dialog at bottom. `<Y>` or `<Enter>` kills, `<N>` cancels. Pressing `<Enter>` repeatedly never loops (30.4)
+- [ ] Cold `nvim` open on a `.lua` file → no `w / b / e / $ / ^ / %` overlays. `<leader>?p` toggles them on. Second `<leader>?p` toggles off (30.7)
+- [ ] `<leader>?` cheatsheet opens → type `remote`, `claude`, `projects`, `capture`, `undo`, or `git` → results show the respective keybindings (30.9, 30.10, 30.11)
+
 ---
 
-Last updated: P1 non-tmux bug batch landed 2026-04-19.
+Last updated: UX micro-batch landed 2026-04-19.
