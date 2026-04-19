@@ -83,14 +83,10 @@ return {
           vim.notify('no Claude session for this project', vim.log.levels.INFO)
           return
         end
-        vim.ui.select({ 'Yes, kill it', 'No, cancel' }, {
-          prompt = "Kill current project's Claude session?",
-        }, function(choice)
-          if choice == 'Yes, kill it' then
-            popup.kill()
-            vim.notify('killed ' .. require('tmux.project').session_name(), vim.log.levels.INFO)
-          end
-        end)
+        if vim.fn.confirm("Kill current project's Claude session?", '&Yes\n&No') == 1 then
+          popup.kill()
+          vim.notify('killed ' .. require('tmux.project').session_name(), vim.log.levels.INFO)
+        end
       end,
       desc = "Claude: kill current project's session",
     },
