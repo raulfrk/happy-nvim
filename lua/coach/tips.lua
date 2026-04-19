@@ -60,28 +60,72 @@ return {
   { keys = '<leader>ss', desc = 'ssh host picker (frecency-ordered)', category = 'remote' },
   { keys = '<leader>sd', desc = 'remote dir picker (zoxide-like, 7d cache)', category = 'remote' },
   { keys = '<leader>sB', desc = 'open remote file as scp:// buffer', category = 'remote' },
-  { keys = '<leader>sg', desc = 'remote grep (nice/ionice over ssh) -> quickfix', category = 'remote' },
+  {
+    keys = '<leader>sg',
+    desc = 'remote grep (nice/ionice over ssh) -> quickfix',
+    category = 'remote',
+  },
 
   -- claude tmux (<leader>c*) — 30.11
-  { keys = '<leader>cc', desc = 'open/attach project claude session (cc-<id>)', category = 'claude' },
-  { keys = '<leader>cp', desc = 'popup claude (SP1: remote-sandboxed if remote)', category = 'claude' },
+  {
+    keys = '<leader>cc',
+    desc = 'open/attach project claude session (cc-<id>)',
+    category = 'claude',
+  },
+  {
+    keys = '<leader>cp',
+    desc = 'popup claude (SP1: remote-sandboxed if remote)',
+    category = 'claude',
+  },
   { keys = '<leader>cf', desc = 'send current file as @path to claude', category = 'claude' },
-  { keys = '<leader>cs', desc = 'send visual selection (fenced w/ file:L-L header)', category = 'claude' },
+  {
+    keys = '<leader>cs',
+    desc = 'send visual selection (fenced w/ file:L-L header)',
+    category = 'claude',
+  },
   { keys = '<leader>ce', desc = 'send LSP diagnostics for current buffer', category = 'claude' },
   { keys = '<leader>cl', desc = 'list claude sessions (telescope picker)', category = 'claude' },
-  { keys = '<leader>cn', desc = 'new named claude session (prompts for slug)', category = 'claude' },
-  { keys = '<leader>ck', desc = "kill current project's claude session (Y/N confirm)", category = 'claude' },
+  {
+    keys = '<leader>cn',
+    desc = 'new named claude session (prompts for slug)',
+    category = 'claude',
+  },
+  {
+    keys = '<leader>ck',
+    desc = "kill current project's claude session (Y/N confirm)",
+    category = 'claude',
+  },
 
   -- projects / cockpit (<leader>P*) — 30.11 (SP1)
-  { keys = '<leader>P', desc = 'projects picker — pivot / peek / add / forget', category = 'projects' },
-  { keys = '<leader>Pa', desc = 'add project (prompt for /path or host:path)', category = 'projects' },
+  {
+    keys = '<leader>P',
+    desc = 'projects picker — pivot / peek / add / forget',
+    category = 'projects',
+  },
+  {
+    keys = '<leader>Pa',
+    desc = 'add project (prompt for /path or host:path)',
+    category = 'projects',
+  },
   { keys = '<leader>Pp', desc = 'peek project scrollback (no pivot)', category = 'projects' },
-  { keys = ':HappyWtProvision <path>', desc = 'provision worktree claude (async)', category = 'projects' },
-  { keys = ':HappyWtCleanup <path>', desc = 'cleanup worktree claude (async)', category = 'projects' },
+  {
+    keys = ':HappyWtProvision <path>',
+    desc = 'provision worktree claude (async)',
+    category = 'projects',
+  },
+  {
+    keys = ':HappyWtCleanup <path>',
+    desc = 'cleanup worktree claude (async)',
+    category = 'projects',
+  },
 
   -- capture (<leader>C*) — SP1 remote->claude one-way data flow
   { keys = '<leader>Cc', desc = 'capture remote pane -> sandbox file', category = 'capture' },
-  { keys = '<leader>Ct', desc = 'toggle tail-pipe from remote pane -> sandbox live.log', category = 'capture' },
+  {
+    keys = '<leader>Ct',
+    desc = 'toggle tail-pipe from remote pane -> sandbox live.log',
+    category = 'capture',
+  },
   { keys = '<leader>Cl', desc = 'pull remote file via scp -> sandbox dir', category = 'capture' },
   { keys = '<leader>Cs', desc = 'send visual selection -> sandbox file', category = 'capture' },
 }
