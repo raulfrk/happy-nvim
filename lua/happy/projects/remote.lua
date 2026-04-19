@@ -65,4 +65,36 @@ function M.provision(id)
   registry.update(id, { sandbox_written = true })
 end
 
+-- spawn_ssh(entry): create a tmux session `remote-<id>` running the ssh cmd.
+--
+-- Resolves id from entry.id; if absent (e.g. caller passed a registry.get()
+-- result, which does not attach .id), falls back to scanning registry.list()
+-- for a matching host+path pair.
+--
+-- HAPPY_REMOTE_SSH_CMD overrides the ssh binary. When set to the literal
+-- 'cat', runs `cat` instead of building an ssh command — used by integration
+-- tests to keep the session alive without real network.
+function M.spawn_ssh(entry)
+  local id = entry.id
+  if not id then
+    for _, v in ipairs(registry.list()) do
+      if v.path == entry.path and v.host == entry.host then
+        id = v.id
+        break
+      end
+    end
+  end
+  local name = 'remote-' .. id
+  local ssh_cmd = os.getenv('HAPPY_REMOTE_SSH_CMD') or 'ssh'
+  local cmd
+  if ssh_cmd == 'cat' then
+    cmd = 'cat' -- test mode: keep the session alive without a real ssh
+  else
+    cmd = ('%s %s -t "cd %s; exec $SHELL"'):format(ssh_cmd, entry.host, entry.path)
+  end
+  vim.fn.system({ 'tmux', 'new-session', '-d', '-s', name, cmd })
+  vim.fn.system({ 'tmux', 'set-env', '-t', name, 'HAPPY_REMOTE_HOST', entry.host })
+  vim.fn.system({ 'tmux', 'set-env', '-t', name, 'HAPPY_REMOTE_PATH', entry.path })
+end
+
 return M
