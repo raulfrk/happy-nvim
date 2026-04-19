@@ -97,11 +97,9 @@ def test_cC_open_fresh_kills_existing_session_then_opens(tmp_path):
           if cb then cb({{ code = 0 }}) end
           return handle
         end
-        vim.fn.system = function(cmd)
-          table.insert(calls, type(cmd) == 'table' and table.concat(cmd, ' ') or tostring(cmd))
-          vim.v.shell_error = 0
-          return ''
-        end
+        -- Don't stub vim.fn.system — let session_alive's
+        -- `tmux has-session` call return non-zero naturally (no tmux server
+        -- in clean headless env) so claude.open takes the new-session path.
         package.loaded['happy.projects.registry'] = {{
           add = function() return 'proj-x' end,
           get = function() return {{ kind = 'local', path = '/tmp' }} end,
