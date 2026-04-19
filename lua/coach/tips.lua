@@ -145,4 +145,11 @@ return {
     desc = 'remote file-name finder (find + telescope)',
     category = 'remote',
   },
+
+  -- SP2 quick-pivot hub
+  {
+    keys = '<leader><leader>',
+    desc = 'quick-pivot hub: projects + hosts + sessions (SP2)',
+    category = 'projects',
+  },
 }

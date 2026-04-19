@@ -153,6 +153,13 @@ Requires a real reachable ssh host.
 - [ ] `<leader>sT` → pick host → enter `/var/log/syslog` → scratch streams log lines live. `q` closes + kills tail
 - [ ] `<leader>sf` → pick host → `/etc` → telescope lists files up to 6 levels deep. `<Enter>` opens selected as `scp://`
 
+## 13. Quick-pivot hub (SP2)
+
+- [ ] `<leader><leader>` opens a single picker merging projects + hosts + orphan claude sessions. Entries show kind icon + id + label + status + age.
+- [ ] Pivot to a project entry → same effect as `<leader>P` → Enter (cwd cd + tmux session focus).
+- [ ] Pivot to a host entry → same effect as `<leader>ss` → Enter (ssh in tmux split).
+- [ ] Sessions whose slug matches a registered project are suppressed from the session source (no duplicate row).
+
 ---
 
-Last updated: SP3 fast remote ops landed 2026-04-19.
+Last updated: SP2 quick-pivot hub landed 2026-04-19.
