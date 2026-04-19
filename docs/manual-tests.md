@@ -132,6 +132,12 @@ Requires a real reachable ssh host.
 - [ ] Lualine shows `✓ <id>` (idle) / `⟳ <id>` (working) / `✗ <id>` (dead) per registered project
 - [ ] `<leader>Pa` prompts and registers a new project (`/path` → local, `host:path` → remote)
 
+## 10. Bug batch 2026-04-19
+
+- [ ] `:checkhealth happy-nvim` renders sections (core / local CLIs / tmux / claude integration) without "no healthcheck found" (30.1)
+- [ ] Open a `.lua` file on a machine without `selene` installed → no error in `:messages` (30.5)
+- [ ] `:HappyLspInfo` in a buffer with an attached client lists `• <name> (id=<n>, root=<path>)`; in a buffer with no client, prints "No LSP clients attached to this buffer." (30.6)
+
 ---
 
-Last updated: multi-project cockpit (SP1) landed 2026-04-19.
+Last updated: P1 non-tmux bug batch landed 2026-04-19.
