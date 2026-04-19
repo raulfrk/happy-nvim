@@ -120,3 +120,56 @@ describe('happy.hub.sources.session_rows', function()
     assert.is_nil(ids['cc-proj-a'])
   end)
 end)
+
+describe('happy.hub merge + weight', function()
+  it('sorts merged entries by weighted normalized score', function()
+    local sources = require('happy.hub.sources')
+    sources.project_rows = function()
+      return {
+        { kind = 'project', id = 'p-hot', raw_score = 10, on_pivot = function() end },
+        { kind = 'project', id = 'p-cold', raw_score = 1, on_pivot = function() end },
+      }
+    end
+    sources.host_rows = function()
+      return { { kind = 'host', id = 'h-hot', raw_score = 10, on_pivot = function() end } }
+    end
+    sources.session_rows = function()
+      return { { kind = 'session', id = 's-hot', raw_score = 1, on_pivot = function() end } }
+    end
+
+    local hub = require('happy.hub')
+    hub._reset_weights_for_test()
+    local merged = hub._merge_for_test()
+    -- Defaults: project=1.0, session=0.8, host=0.6
+    -- Normalized:
+    --   p-hot: 1.0*1.0=1.0
+    --   p-cold: 0.1*1.0=0.1
+    --   h-hot: 1.0*0.6=0.6
+    --   s-hot: 1.0*0.8=0.8
+    -- Order: p-hot (1.0) > s-hot (0.8) > h-hot (0.6) > p-cold (0.1)
+    assert.equals('p-hot', merged[1].id)
+    assert.equals('s-hot', merged[2].id)
+    assert.equals('h-hot', merged[3].id)
+    assert.equals('p-cold', merged[4].id)
+  end)
+
+  it('applies user-supplied weight overrides', function()
+    local sources = require('happy.hub.sources')
+    sources.project_rows = function()
+      return { { kind = 'project', id = 'p', raw_score = 1, on_pivot = function() end } }
+    end
+    sources.host_rows = function()
+      return { { kind = 'host', id = 'h', raw_score = 1, on_pivot = function() end } }
+    end
+    sources.session_rows = function()
+      return {}
+    end
+
+    local hub = require('happy.hub')
+    hub.setup({ weights = { project = 0.1, host = 2.0 } })
+    local merged = hub._merge_for_test()
+    assert.equals('h', merged[1].id)
+    assert.equals('p', merged[2].id)
+    hub._reset_weights_for_test()
+  end)
+end)
