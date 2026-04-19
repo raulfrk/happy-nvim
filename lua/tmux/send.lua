@@ -57,17 +57,16 @@ function M.resolve_target()
     local cwd = vim.fn.getcwd()
     local id = registry.add({ kind = 'local', path = cwd })
     local entry = registry.get(id)
-    if not entry then return nil end
+    if not entry then
+      return nil
+    end
     local session = (entry.kind == 'remote' and 'remote-' or 'cc-') .. id
-    local has = vim
-      .system({ 'tmux', 'has-session', '-t', session }, { text = true })
-      :wait()
-    if has.code ~= 0 then return nil end
+    local has = vim.system({ 'tmux', 'has-session', '-t', session }, { text = true }):wait()
+    if has.code ~= 0 then
+      return nil
+    end
     local res = vim
-      .system(
-        { 'tmux', 'list-panes', '-t', session, '-F', '#{pane_id}' },
-        { text = true }
-      )
+      .system({ 'tmux', 'list-panes', '-t', session, '-F', '#{pane_id}' }, { text = true })
       :wait()
     return (res.stdout or ''):match('^(%S+)')
   end)

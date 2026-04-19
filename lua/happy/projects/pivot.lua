@@ -8,7 +8,9 @@ local registry = require('happy.projects.registry')
 local M = {}
 
 local function session_name(entry)
-  if entry.kind == 'remote' then return 'remote-' .. entry.id end
+  if entry.kind == 'remote' then
+    return 'remote-' .. entry.id
+  end
   return 'cc-' .. entry.id
 end
 
@@ -41,7 +43,11 @@ function M.pivot(id)
   end
   local name = session_name(entry)
   if not session_alive(name) then
-    if entry.kind == 'local' then spawn_local(entry) else spawn_remote(entry) end
+    if entry.kind == 'local' then
+      spawn_local(entry)
+    else
+      spawn_remote(entry)
+    end
     vim.notify(name .. ' session was dead — spawned fresh.', vim.log.levels.INFO)
   end
   registry.touch(id)
@@ -53,7 +59,9 @@ end
 -- peek(id): show tail of the session's pane in a scratch buffer.
 function M.peek(id)
   local entry = registry.get(id)
-  if not entry then return end
+  if not entry then
+    return
+  end
   entry.id = id
   local name = session_name(entry)
   if not session_alive(name) then

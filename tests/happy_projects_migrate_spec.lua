@@ -4,10 +4,12 @@ local migrate = require('happy.projects.migrate')
 describe('happy.projects.migrate', function()
   local tmp
   before_each(function()
-    tmp = vim.fn.tempname(); registry._set_path_for_test(tmp)
+    tmp = vim.fn.tempname()
+    registry._set_path_for_test(tmp)
   end)
   after_each(function()
-    os.remove(tmp); registry._reset_for_test()
+    os.remove(tmp)
+    registry._reset_for_test()
   end)
 
   it('ingests sessions whose HAPPY_PROJECT_PATH env is set', function()
@@ -33,8 +35,12 @@ describe('happy.projects.migrate', function()
 
   it('is idempotent', function()
     local fake_tmux = function(args)
-      if args[2] == 'list-sessions' then return 'cc-foo' end
-      if args[2] == 'show-env' then return 'HAPPY_PROJECT_PATH=/home/u/foo' end
+      if args[2] == 'list-sessions' then
+        return 'cc-foo'
+      end
+      if args[2] == 'show-env' then
+        return 'HAPPY_PROJECT_PATH=/home/u/foo'
+      end
       return ''
     end
     migrate._set_tmux_fn_for_test(fake_tmux)

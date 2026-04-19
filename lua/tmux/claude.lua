@@ -75,15 +75,13 @@ function M.open()
   local id, session, cwd = session_for_cwd()
   if not session_alive(session) then
     local res = vim
-      .system({
-        'tmux', 'new-session', '-d', '-s', session, '-c', cwd, 'claude',
-      }, { text = true })
+      .system(
+        { 'tmux', 'new-session', '-d', '-s', session, '-c', cwd, 'claude' },
+        { text = true }
+      )
       :wait()
     if res.code ~= 0 then
-      vim.notify(
-        'failed to spawn Claude session: ' .. (res.stderr or ''),
-        vim.log.levels.ERROR
-      )
+      vim.notify('failed to spawn Claude session: ' .. (res.stderr or ''), vim.log.levels.ERROR)
       return
     end
     vim.system({ 'tmux', 'set-env', '-t', session, 'HAPPY_PROJECT_PATH', cwd }):wait()

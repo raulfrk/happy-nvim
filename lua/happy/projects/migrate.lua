@@ -10,18 +10,24 @@ local M = {}
 
 local run_tmux = function(args)
   local out = vim.fn.system(args)
-  if vim.v.shell_error ~= 0 then return '' end
+  if vim.v.shell_error ~= 0 then
+    return ''
+  end
   return out
 end
 
 -- test hook: swap the tmux runner for a fake
-function M._set_tmux_fn_for_test(fn) run_tmux = fn end
+function M._set_tmux_fn_for_test(fn)
+  run_tmux = fn
+end
 
 function M.run()
   local raw = run_tmux({ 'tmux', 'list-sessions', '-F', '#S' })
   local sessions = {}
   for s in raw:gmatch('[^\n]+') do
-    if s:match('^cc%-') then table.insert(sessions, s) end
+    if s:match('^cc%-') then
+      table.insert(sessions, s)
+    end
   end
   local before = #registry.list()
   for _, s in ipairs(sessions) do

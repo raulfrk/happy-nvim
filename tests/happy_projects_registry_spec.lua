@@ -64,7 +64,8 @@ describe('happy.projects.registry', function()
     -- behind as half-written garbage.
     local stale = tmp .. '.new'
     local fh = io.open(stale, 'w')
-    fh:write('{ "partial":'); fh:close()
+    fh:write('{ "partial":')
+    fh:close()
 
     -- Reload: load() reads the real file only, must ignore the stale .new.
     registry._reset_for_test()

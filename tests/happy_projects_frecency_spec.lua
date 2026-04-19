@@ -7,7 +7,8 @@ describe('happy.projects.registry frecency + collisions', function()
     registry._set_path_for_test(tmp)
   end)
   after_each(function()
-    os.remove(tmp); registry._reset_for_test()
+    os.remove(tmp)
+    registry._reset_for_test()
   end)
 
   it('score ranks recently+frequently-opened higher', function()
@@ -28,10 +29,14 @@ describe('happy.projects.registry frecency + collisions', function()
   end)
 
   it('sorted_by_score returns list ordered descending', function()
-    registry.update(registry.add({ kind = 'local', path = '/tmp/low' }),
-      { open_count = 1, last_opened = os.time() - 3600 * 48 })
-    registry.update(registry.add({ kind = 'local', path = '/tmp/high' }),
-      { open_count = 10, last_opened = os.time() })
+    registry.update(
+      registry.add({ kind = 'local', path = '/tmp/low' }),
+      { open_count = 1, last_opened = os.time() - 3600 * 48 }
+    )
+    registry.update(
+      registry.add({ kind = 'local', path = '/tmp/high' }),
+      { open_count = 10, last_opened = os.time() }
+    )
     local sorted = registry.sorted_by_score()
     assert.equals('/tmp/high', sorted[1].path)
   end)

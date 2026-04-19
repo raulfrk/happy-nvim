@@ -16,7 +16,9 @@ local M = {}
 
 local function sandbox_root()
   local override = os.getenv('HAPPY_REMOTE_SANDBOX_BASE')
-  if override and override ~= '' then return override end
+  if override and override ~= '' then
+    return override
+  end
   return vim.fn.stdpath('data') .. '/happy/remote-sandboxes'
 end
 
@@ -26,7 +28,9 @@ end
 
 function M.provision(id)
   local entry = registry.get(id)
-  if not entry or entry.kind ~= 'remote' then return end
+  if not entry or entry.kind ~= 'remote' then
+    return
+  end
 
   local dir = M.sandbox_dir(id)
   vim.fn.mkdir(dir .. '/.claude', 'p')
@@ -97,28 +101,40 @@ function M.spawn_ssh(entry)
   vim.fn.system({ 'tmux', 'set-env', '-t', name, 'HAPPY_REMOTE_PATH', entry.path })
 end
 
-local function ts() return os.date('!%Y%m%dT%H%M%SZ') end
+local function ts()
+  return os.date('!%Y%m%dT%H%M%SZ')
+end
 
 function M.capture(id)
-  local entry = registry.get(id); if not entry or entry.kind ~= 'remote' then return end
+  local entry = registry.get(id)
+  if not entry or entry.kind ~= 'remote' then
+    return
+  end
   local name = 'remote-' .. id
   local out = vim.fn.system({ 'tmux', 'capture-pane', '-t', name, '-p', '-S', '-500' })
   if vim.v.shell_error ~= 0 then
-    vim.notify('capture failed: no remote pane', vim.log.levels.WARN); return
+    vim.notify('capture failed: no remote pane', vim.log.levels.WARN)
+    return
   end
   local path = M.sandbox_dir(id) .. '/capture-' .. ts() .. '.log'
-  local fh = assert(io.open(path, 'w')); fh:write(out); fh:close()
+  local fh = assert(io.open(path, 'w'))
+  fh:write(out)
+  fh:close()
   vim.notify('captured -> ' .. path, vim.log.levels.INFO)
   return path
 end
 
 function M.toggle_tail(id)
-  local entry = registry.get(id); if not entry or entry.kind ~= 'remote' then return end
+  local entry = registry.get(id)
+  if not entry or entry.kind ~= 'remote' then
+    return
+  end
   local name = 'remote-' .. id
   local live = M.sandbox_dir(id) .. '/live.log'
-  local pipe_state = vim.fn.system({ 'tmux', 'show-options', '-t', name, '-p', '-v', '@happy-tail' })
+  local pipe_state =
+    vim.fn.system({ 'tmux', 'show-options', '-t', name, '-p', '-v', '@happy-tail' })
   if pipe_state:find('on') then
-    vim.fn.system({ 'tmux', 'pipe-pane', '-t', name })  -- toggle off
+    vim.fn.system({ 'tmux', 'pipe-pane', '-t', name }) -- toggle off
     vim.fn.system({ 'tmux', 'set-option', '-t', name, '-p', '@happy-tail', 'off' })
     vim.notify('tail OFF', vim.log.levels.INFO)
   else
@@ -129,7 +145,10 @@ function M.toggle_tail(id)
 end
 
 function M.pull(id, remote_path)
-  local entry = registry.get(id); if not entry or entry.kind ~= 'remote' then return end
+  local entry = registry.get(id)
+  if not entry or entry.kind ~= 'remote' then
+    return
+  end
   local dest = M.sandbox_dir(id) .. '/' .. vim.fs.basename(remote_path)
   vim.fn.system({ 'scp', entry.host .. ':' .. remote_path, dest })
   if vim.v.shell_error == 0 then
@@ -140,11 +159,18 @@ function M.pull(id, remote_path)
 end
 
 function M.send_selection(id)
-  local entry = registry.get(id); if not entry or entry.kind ~= 'remote' then return end
+  local entry = registry.get(id)
+  if not entry or entry.kind ~= 'remote' then
+    return
+  end
   local reg = vim.fn.getreg('+')
-  if reg == '' then reg = vim.fn.getreg('"') end
+  if reg == '' then
+    reg = vim.fn.getreg('"')
+  end
   local path = M.sandbox_dir(id) .. '/selection-' .. ts() .. '.txt'
-  local fh = assert(io.open(path, 'w')); fh:write(reg); fh:close()
+  local fh = assert(io.open(path, 'w'))
+  fh:write(reg)
+  fh:close()
   vim.notify('selection -> ' .. path, vim.log.levels.INFO)
 end
 

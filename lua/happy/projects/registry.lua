@@ -11,7 +11,9 @@ local M = {}
 local default_path = vim.fn.stdpath('data') .. '/happy/projects.json'
 local state_path = default_path
 local env_override = os.getenv('HAPPY_PROJECTS_JSON_OVERRIDE')
-if env_override and env_override ~= '' then state_path = env_override end
+if env_override and env_override ~= '' then
+  state_path = env_override
+end
 local state = nil
 
 local function slugify(s)
@@ -19,10 +21,14 @@ local function slugify(s)
 end
 
 local function load()
-  if state then return state end
+  if state then
+    return state
+  end
   state = { version = 1, projects = {} }
   local fh = io.open(state_path, 'r')
-  if not fh then return state end
+  if not fh then
+    return state
+  end
   local content = fh:read('*a')
   fh:close()
   local ok, parsed = pcall(vim.json.decode, content)
@@ -36,14 +42,17 @@ local function load()
     local renamed = os.rename(state_path, rescued)
     if renamed then
       vim.notify(
-        'happy.projects: registry at ' .. state_path
-          .. ' was unreadable; moved to ' .. rescued
+        'happy.projects: registry at '
+          .. state_path
+          .. ' was unreadable; moved to '
+          .. rescued
           .. ' and starting with an empty registry.',
         vim.log.levels.WARN
       )
     else
       vim.notify(
-        'happy.projects: registry at ' .. state_path
+        'happy.projects: registry at '
+          .. state_path
           .. ' was unreadable and could not be rescued; starting with an empty registry.',
         vim.log.levels.ERROR
       )
@@ -54,7 +63,9 @@ end
 
 local function save()
   local dir = state_path:match('(.*/)')
-  if dir then vim.fn.mkdir(dir, 'p') end
+  if dir then
+    vim.fn.mkdir(dir, 'p')
+  end
   local tmp = state_path .. '.new'
   local fh = assert(io.open(tmp, 'w'))
   fh:write(vim.json.encode(state))
@@ -69,29 +80,43 @@ local function make_id(spec, existing)
   else
     base = slugify(spec.host) .. '-' .. slugify(spec.path)
   end
-  if base == '' then base = 'proj' end
-  if not existing[base] then return base end
+  if base == '' then
+    base = 'proj'
+  end
+  if not existing[base] then
+    return base
+  end
   local n = 2
-  while existing[base .. '-' .. n] do n = n + 1 end
+  while existing[base .. '-' .. n] do
+    n = n + 1
+  end
   return base .. '-' .. n
 end
 
 local function identity_match(a, b)
-  if a.kind ~= b.kind then return false end
-  if a.kind == 'local' then return a.path == b.path end
+  if a.kind ~= b.kind then
+    return false
+  end
+  if a.kind == 'local' then
+    return a.path == b.path
+  end
   return a.host == b.host and a.path == b.path
 end
 
 function M.add(spec)
   assert(spec.kind == 'local' or spec.kind == 'remote', 'invalid kind')
-  if spec.kind == 'local' then assert(spec.path, 'path required') end
+  if spec.kind == 'local' then
+    assert(spec.path, 'path required')
+  end
   if spec.kind == 'remote' then
     assert(spec.host, 'host required')
     assert(spec.path, 'path required')
   end
   load()
   for id, entry in pairs(state.projects) do
-    if identity_match(entry, spec) then return id end
+    if identity_match(entry, spec) then
+      return id
+    end
   end
   local id = make_id(spec, state.projects)
   state.projects[id] = {
@@ -132,7 +157,9 @@ end
 function M.touch(id)
   load()
   local entry = state.projects[id]
-  if not entry then return end
+  if not entry then
+    return
+  end
   entry.open_count = (entry.open_count or 0) + 1
   entry.last_opened = os.time()
   save()
@@ -141,26 +168,40 @@ end
 function M.update(id, patch)
   load()
   local entry = state.projects[id]
-  if not entry then return end
-  for k, v in pairs(patch) do entry[k] = v end
+  if not entry then
+    return
+  end
+  for k, v in pairs(patch) do
+    entry[k] = v
+  end
   save()
 end
 
 function M.score(id)
   load()
-  local entry = state.projects[id]; if not entry then return 0 end
+  local entry = state.projects[id]
+  if not entry then
+    return 0
+  end
   local age_hours = (os.time() - (entry.last_opened or 0)) / 3600
   return (entry.open_count or 1) * math.exp(-age_hours * 0.05)
 end
 
 function M.sorted_by_score()
   local entries = M.list()
-  table.sort(entries, function(a, b) return M.score(a.id) > M.score(b.id) end)
+  table.sort(entries, function(a, b)
+    return M.score(a.id) > M.score(b.id)
+  end)
   return entries
 end
 
 -- test hooks
-function M._set_path_for_test(p) state_path = p end
-function M._reset_for_test() state = nil; state_path = default_path end
+function M._set_path_for_test(p)
+  state_path = p
+end
+function M._reset_for_test()
+  state = nil
+  state_path = default_path
+end
 
 return M
