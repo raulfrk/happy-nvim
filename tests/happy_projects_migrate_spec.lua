@@ -21,7 +21,7 @@ describe('happy.projects.migrate', function()
         return 'HAPPY_PROJECT_PATH=/home/u/foo'
       end
       if args[2] == 'show-env' and args[4] == 'cc-bar' then
-        return '-HAPPY_PROJECT_PATH'  -- unset
+        return '-HAPPY_PROJECT_PATH' -- unset
       end
       return ''
     end
@@ -45,6 +45,6 @@ describe('happy.projects.migrate', function()
     end
     migrate._set_tmux_fn_for_test(fake_tmux)
     assert.equals(1, migrate.run())
-    assert.equals(0, migrate.run())  -- dedup
+    assert.equals(0, migrate.run()) -- dedup
   end)
 end)
