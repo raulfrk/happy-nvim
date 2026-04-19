@@ -10,7 +10,13 @@ return {
     vim.api.nvim_create_autocmd({ 'BufWritePost', 'BufReadPost' }, {
       group = vim.api.nvim_create_augroup('happy_lint', { clear = true }),
       callback = function()
-        lint.try_lint()
+        local linters = lint.linters_by_ft[vim.bo.filetype] or {}
+        local runnable = vim.tbl_filter(function(l)
+          return vim.fn.executable(l) == 1
+        end, linters)
+        if #runnable > 0 then
+          lint.try_lint(runnable)
+        end
       end,
     })
   end,
