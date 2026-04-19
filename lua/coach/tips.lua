@@ -128,4 +128,21 @@ return {
   },
   { keys = '<leader>Cl', desc = 'pull remote file via scp -> sandbox dir', category = 'capture' },
   { keys = '<leader>Cs', desc = 'send visual selection -> sandbox file', category = 'capture' },
+
+  -- SP3 remote additions
+  {
+    keys = '<leader>sc',
+    desc = 'remote ad-hoc cmd (streams to scratch buffer)',
+    category = 'remote',
+  },
+  {
+    keys = '<leader>sT',
+    desc = 'remote log tail (tail -F streaming)',
+    category = 'remote',
+  },
+  {
+    keys = '<leader>sf',
+    desc = 'remote file-name finder (find + telescope)',
+    category = 'remote',
+  },
 }
