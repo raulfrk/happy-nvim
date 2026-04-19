@@ -1,3 +1,11 @@
+-- Projects registry.
+--
+-- Concurrency: single-writer, last-writer-wins. This module writes the
+-- registry via a tmp-file + os.rename, which is atomic per-writer but has
+-- no cross-process locking. If two nvim instances edit the same registry
+-- concurrently, the second rename wins and the first instance's in-memory
+-- edits are lost on its next save. Acceptable for SP1; revisit if
+-- multi-instance workflows become common.
 local M = {}
 
 local default_path = vim.fn.stdpath('data') .. '/happy/projects.json'
@@ -18,6 +26,26 @@ local function load()
   local ok, parsed = pcall(vim.json.decode, content)
   if ok and type(parsed) == 'table' and type(parsed.projects) == 'table' then
     state = parsed
+  else
+    -- Decode failed or shape wrong. Rescue the bad file so the next save()
+    -- doesn't silently overwrite a potentially-recoverable registry with an
+    -- empty one.
+    local rescued = state_path .. '.corrupt-' .. tostring(os.time())
+    local renamed = os.rename(state_path, rescued)
+    if renamed then
+      vim.notify(
+        'happy.projects: registry at ' .. state_path
+          .. ' was unreadable; moved to ' .. rescued
+          .. ' and starting with an empty registry.',
+        vim.log.levels.WARN
+      )
+    else
+      vim.notify(
+        'happy.projects: registry at ' .. state_path
+          .. ' was unreadable and could not be rescued; starting with an empty registry.',
+        vim.log.levels.ERROR
+      )
+    end
   end
   return state
 end

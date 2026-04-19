@@ -55,15 +55,35 @@ describe('happy.projects.registry', function()
     assert.equals(id1, id2)
   end)
 
-  it('atomic write survives kill-during-write (tmp file does not clobber real)', function()
+  it('stale .new tmp file from crashed write does not corrupt state', function()
+    -- Commit a real entry so the registry file exists on disk.
     registry.add({ kind = 'local', path = '/tmp/proj-e' })
-    local tmp_partial = tmp .. '.tmp'
-    -- simulate a stale tmp file; real path should still parse
-    local fh = io.open(tmp_partial, 'w')
+
+    -- Simulate a mid-write crash: save() writes to `<path>.new` then
+    -- renames. If nvim dies between write and rename, the .new is left
+    -- behind as half-written garbage.
+    local stale = tmp .. '.new'
+    local fh = io.open(stale, 'w')
     fh:write('{ "partial":'); fh:close()
+
+    -- Reload: load() reads the real file only, must ignore the stale .new.
     registry._reset_for_test()
     registry._set_path_for_test(tmp)
     assert.equals('/tmp/proj-e', registry.list()[1].path)
-    os.remove(tmp_partial)
+
+    -- Next save() must overwrite the stale .new cleanly. After it runs,
+    -- either the .new is gone (renamed onto the real path) or it contains
+    -- valid JSON — no stale garbage leaks past the write.
+    registry.add({ kind = 'local', path = '/tmp/proj-f' })
+    local leftover = io.open(stale, 'r')
+    if leftover then
+      local content = leftover:read('*a')
+      leftover:close()
+      local ok, decoded = pcall(vim.json.decode, content)
+      assert.is_true(ok, 'stale .new should not linger as garbage after save')
+      assert.is_table(decoded)
+    end
+
+    os.remove(stale)
   end)
 end)
