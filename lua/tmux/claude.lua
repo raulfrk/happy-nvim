@@ -168,4 +168,57 @@ function M.send_errors_guarded()
   end
 end
 
+local function scratch_name_for(id)
+  return ('cc-%s-scratch-%d'):format(id, os.time())
+end
+
+local function scratch_cwd_for(id, fallback_cwd)
+  local ok_remote, remote = pcall(require, 'happy.projects.remote')
+  local ok_reg, reg = pcall(require, 'happy.projects.registry')
+  if ok_remote and ok_reg then
+    local entry = reg.get(id)
+    if entry and entry.kind == 'remote' then
+      return remote.sandbox_dir(id)
+    end
+  end
+  return fallback_cwd
+end
+
+function M.open_scratch()
+  local id, _, cwd = session_for_cwd()
+  local name = scratch_name_for(id)
+  local effective_cwd = scratch_cwd_for(id, cwd)
+  local res = vim
+    .system(
+      { 'tmux', 'new-session', '-d', '-s', name, '-c', effective_cwd, 'claude' },
+      { text = true }
+    )
+    :wait()
+  if res.code ~= 0 then
+    vim.notify('failed to spawn scratch claude: ' .. (res.stderr or ''), vim.log.levels.ERROR)
+    return
+  end
+  vim.system({
+    'tmux',
+    'display-popup',
+    '-E',
+    '-w',
+    '85%',
+    '-h',
+    '85%',
+    'tmux',
+    'attach',
+    '-t',
+    name,
+  }, {}, function()
+    vim.system({ 'tmux', 'kill-session', '-t', name }):wait()
+  end)
+end
+
+function M.open_scratch_guarded()
+  if guard() then
+    M.open_scratch()
+  end
+end
+
 return M
