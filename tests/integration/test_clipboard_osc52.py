@@ -149,12 +149,25 @@ def test_textyankpost_emits_osc52(
             f"marker: {marker_file}"
         )
         payload = marker_file.read_bytes()
-        assert payload.startswith(b"\x1b]52;c;") and payload.endswith(b"\x07"), (
-            f"OSC 52 payload malformed: {payload!r}"
+        # Under $TMUX (which this test sets), clipboard module wraps OSC 52 in
+        # a tmux DCS passthrough. Strip the outer wrapper before asserting on
+        # the inner OSC 52 form. Inner payload now uses ST (\x1b\\) terminator
+        # instead of legacy BEL (\x07).
+        if payload.startswith(b"\x1bPtmux;"):
+            assert payload.endswith(b"\x1b\\"), (
+                f"DCS-wrapped payload missing ST terminator: {payload!r}"
+            )
+            inner = payload[len(b"\x1bPtmux;"):-len(b"\x1b\\")]
+            # Unescape doubled ESC bytes in passthrough body.
+            inner = inner.replace(b"\x1b\x1b", b"\x1b")
+        else:
+            inner = payload
+        assert inner.startswith(b"\x1b]52;c;") and inner.endswith(b"\x1b\\"), (
+            f"OSC 52 payload malformed (inner): {inner!r}"
         )
         # Decode base64 content and assert it's "hello"
         import base64
-        b64 = payload[len(b"\x1b]52;c;"):-1]
+        b64 = inner[len(b"\x1b]52;c;"):-len(b"\x1b\\")]
         assert base64.b64decode(b64).rstrip() == b"hello", (
             f"OSC 52 content decoded to {base64.b64decode(b64)!r}, expected b'hello'"
         )

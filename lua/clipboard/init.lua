@@ -14,7 +14,11 @@ function M._encode_osc52(content)
   if #b64 > MAX_B64 then
     return nil
   end
-  return string.format('\027]52;c;%s\007', b64)
+  local osc = string.format('\027]52;c;%s\027\\', b64)
+  if vim.env.TMUX and vim.env.TMUX ~= '' then
+    osc = '\027Ptmux;' .. osc:gsub('\027', '\027\027') .. '\027\\'
+  end
+  return osc
 end
 
 function M._emit(seq)
@@ -47,6 +51,23 @@ function M.setup()
       M._emit(seq)
     end,
   })
+
+  vim.api.nvim_create_user_command('HappyCheckClipboard', function()
+    local payload = 'HAPPY-CLIPBOARD-TEST-' .. os.time()
+    local seq = M._encode_osc52(payload)
+    if not seq then
+      vim.notify('OSC 52 encoding failed (payload too large?)', vim.log.levels.ERROR)
+      return
+    end
+    M._emit(seq)
+    vim.notify(
+      'Emitted OSC 52 test payload. Paste in host terminal / browser — '
+        .. 'expect `'
+        .. payload
+        .. '`.',
+      vim.log.levels.INFO
+    )
+  end, { desc = 'Emit a known OSC 52 payload + print expected string' })
 end
 
 return M

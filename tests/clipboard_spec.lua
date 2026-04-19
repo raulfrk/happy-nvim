@@ -7,10 +7,25 @@ describe('clipboard', function()
     clip = require('clipboard')
   end)
 
-  it('encode_osc52() returns correct escape sequence for "hello"', function()
+  it('encode_osc52() returns raw OSC 52 w/ ST terminator when TMUX unset', function()
+    local old_tmux = vim.env.TMUX
+    vim.env.TMUX = nil
     local seq = clip._encode_osc52('hello')
     -- base64 of "hello" = "aGVsbG8="
-    assert.are.equal('\027]52;c;aGVsbG8=\007', seq)
+    assert.are.equal('\027]52;c;aGVsbG8=\027\\', seq)
+    vim.env.TMUX = old_tmux
+  end)
+
+  it('encode_osc52() wraps in tmux DCS passthrough when TMUX set', function()
+    local old_tmux = vim.env.TMUX
+    vim.env.TMUX = '/tmp/tmux-1000/default,123,0'
+    local seq = clip._encode_osc52('hello')
+    -- Outer DCS wrapper
+    assert.is_truthy(seq:find('^\027Ptmux;'))
+    assert.is_truthy(seq:find('\027\\$'))
+    -- Inner OSC 52 w/ doubled ESC for passthrough
+    assert.is_truthy(seq:find('\027\027%]52;c;aGVsbG8=\027\027\\', 1, false))
+    vim.env.TMUX = old_tmux
   end)
 
   it('encode_osc52() returns nil for content exceeding 74KB base64 cap', function()
