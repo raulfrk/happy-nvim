@@ -66,6 +66,17 @@ return {
         end,
       })
 
+      vim.api.nvim_create_user_command('HappyLspInfo', function()
+        local clients = vim.lsp.get_clients({ bufnr = 0 })
+        if #clients == 0 then
+          vim.notify('No LSP clients attached to this buffer.', vim.log.levels.INFO)
+          return
+        end
+        for _, c in ipairs(clients) do
+          print(('• %s (id=%d, root=%s)'):format(c.name, c.id, c.config.root_dir or '?'))
+        end
+      end, { desc = 'Show attached LSP clients (0.12-safe replacement for :LspInfo)' })
+
       -- Server setup via mason-lspconfig
       require('mason-lspconfig').setup({
         ensure_installed = {
