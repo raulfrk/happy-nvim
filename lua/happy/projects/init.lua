@@ -85,6 +85,32 @@ function M.setup(opts)
   vim.api.nvim_create_user_command('HappyProjectForget', function(args)
     require('happy.projects.registry').forget(args.args)
   end, { nargs = 1 })
+
+  local function run_wt_script(script, path)
+    local scratch = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_name(scratch, ('[%s %s]'):format(script, path))
+    vim.cmd('sbuffer ' .. scratch)
+    vim.bo[scratch].buftype = 'nofile'
+    local function append(line)
+      vim.schedule(function()
+        vim.api.nvim_buf_set_lines(scratch, -1, -1, false, { line })
+      end)
+    end
+    vim.system({ 'bash', 'scripts/' .. script, path }, {
+      stdout = function(_, data) if data then append(data) end end,
+      stderr = function(_, data) if data then append('ERR: ' .. data) end end,
+    }, function(out)
+      append(('=== exit %d ==='):format(out.code))
+    end)
+  end
+
+  vim.api.nvim_create_user_command('HappyWtProvision', function(args)
+    run_wt_script('wt-claude-provision.sh', args.args)
+  end, { nargs = 1, complete = 'file' })
+
+  vim.api.nvim_create_user_command('HappyWtCleanup', function(args)
+    run_wt_script('wt-claude-cleanup.sh', args.args)
+  end, { nargs = 1, complete = 'file' })
 end
 
 return M
