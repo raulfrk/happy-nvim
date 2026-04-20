@@ -207,9 +207,9 @@ function M.open_scratch()
     'attach',
     '-t',
     name,
-  }, {}, function()
+  }, {}, vim.schedule_wrap(function()
     vim.system({ 'tmux', 'kill-session', '-t', name }):wait()
-  end)
+  end))
 end
 
 function M.open_scratch_guarded()
