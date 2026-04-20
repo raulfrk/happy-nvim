@@ -15,16 +15,16 @@
 ### Task 0: Bootstrap — cherry-pick spec + plan onto worktree branch
 
 **Files:**
-- Cherry-pick: commit `7039c5f` (docs: tmux+claude rework design spec)
-- Cherry-pick: commit `f13efd1` (docs: tmux+claude rework implementation plan)
+- Cherry-pick: every commit on `origin/main` that the branch doesn't have yet (spec + plan + any fixups).
 
-- [ ] **Step 1: Cherry-pick both commits into feat-sp1-cockpit**
+- [ ] **Step 1: Cherry-pick all new main commits into feat-sp1-cockpit**
 
 Run:
 ```bash
 cd /home/raul/worktrees/happy-nvim/feat-sp1-cockpit
-git fetch origin main
-git cherry-pick 7039c5f f13efd1
+# Main is on the same repo's local filesystem (worktree model), so we can
+# cherry-pick from the local `main` ref directly without fetching.
+git cherry-pick $(git log --reverse --format=%H HEAD..main)
 ```
 Expected: both commits apply cleanly (spec = 267 lines; plan = this file).
 
