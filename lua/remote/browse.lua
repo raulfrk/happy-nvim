@@ -188,9 +188,10 @@ function M._is_binary(host, rpath)
     return false
   end
   local util = require('remote.util')
-  local sq = util.shellquote or function(s)
-    return "'" .. tostring(s):gsub("'", "'\\''") .. "'"
-  end
+  local sq = util.shellquote
+    or function(s)
+      return "'" .. tostring(s):gsub("'", "'\\''") .. "'"
+    end
   local cmd = { 'ssh', host, 'file -b --mime-encoding ' .. sq(rpath) }
   local mime = util.run(cmd, { text = true })
   return mime.code == 0 and M._is_binary_mime(mime.stdout or '')
