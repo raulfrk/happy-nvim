@@ -1,17 +1,62 @@
--- lua/tmux/claude.lua — <leader>c* commands
+-- lua/tmux/claude.lua — <leader>c* commands.
+-- cc = layout-smart split in current tmux window (per-project pane id).
+-- cp (claude_popup.lua) is the primary entry point; cc is secondary.
 local M = {}
 local send = require('tmux.send')
 local registry = require('happy.projects.registry')
 
-local function session_for_cwd()
+-- Returns (project_id, cwd) for the current buffer's cwd. Registry is
+-- dedup-safe: same cwd → same id across calls.
+local function project_for_cwd()
   local cwd = vim.fn.getcwd()
-  local id = registry.add({ kind = 'local', path = cwd })
-  return id, 'cc-' .. id, cwd
+  return registry.add({ kind = 'local', path = cwd }), cwd
 end
 
-local function session_alive(name)
-  vim.fn.system({ 'tmux', 'has-session', '-t', name })
-  return vim.v.shell_error == 0
+-- Per-slug window option so two projects in the same tmux window can
+-- each track their own pane id (fixes bug 30.3 collision).
+local function pane_opt_name(slug)
+  return '@claude_pane_id_' .. slug
+end
+
+local function read_pane_id(slug)
+  local res = vim
+    .system({ 'tmux', 'show-option', '-w', '-v', '-q', pane_opt_name(slug) }, { text = true })
+    :wait()
+  if res.code ~= 0 then
+    return nil
+  end
+  local id = (res.stdout or ''):gsub('%s+$', '')
+  return id ~= '' and id or nil
+end
+
+local function pane_alive(pane_id)
+  if not pane_id then
+    return false
+  end
+  local res = vim.system({ 'tmux', 'list-panes', '-t', pane_id }, { text = true }):wait()
+  return res.code == 0
+end
+
+local function write_pane_id(slug, pane_id)
+  vim.system({ 'tmux', 'set-option', '-w', pane_opt_name(slug), pane_id }):wait()
+end
+
+function M.open()
+  local slug, cwd = project_for_cwd()
+  local pane = read_pane_id(slug)
+  if pane_alive(pane) then
+    vim.system({ 'tmux', 'select-pane', '-t', pane }):wait()
+    registry.touch(slug)
+    return
+  end
+  local split = require('tmux.split')
+  local new_pane = split.open('claude', { cwd = cwd })
+  if not new_pane then
+    vim.notify('failed to spawn claude split', vim.log.levels.ERROR)
+    return
+  end
+  write_pane_id(slug, new_pane)
+  registry.touch(slug)
 end
 
 function M._build_cf_payload(rel_path)
@@ -71,29 +116,6 @@ local function guard_buf_rel_path()
   return p
 end
 
-function M.open()
-  local id, session, cwd = session_for_cwd()
-  if not session_alive(session) then
-    local res = vim
-      .system({ 'tmux', 'new-session', '-d', '-s', session, '-c', cwd, 'claude' }, { text = true })
-      :wait()
-    if res.code ~= 0 then
-      vim.notify('failed to spawn Claude session: ' .. (res.stderr or ''), vim.log.levels.ERROR)
-      return
-    end
-    vim.system({ 'tmux', 'set-env', '-t', session, 'HAPPY_PROJECT_PATH', cwd }):wait()
-  end
-  registry.touch(id)
-  if vim.env.TMUX and vim.env.TMUX ~= '' then
-    vim.system({ 'tmux', 'switch-client', '-t', session }):wait()
-  else
-    vim.notify(
-      session .. ' is up. Attach via `tmux attach -t ' .. session .. '`.',
-      vim.log.levels.INFO
-    )
-  end
-end
-
 function M.send_file()
   local p = guard_buf_rel_path()
   if not p then
@@ -146,12 +168,14 @@ function M.open_fresh_guarded()
   if not guard() then
     return
   end
-  local _, session, _ = session_for_cwd()
-  if session_alive(session) then
-    vim.system({ 'tmux', 'kill-session', '-t', session }):wait()
+  local slug = project_for_cwd()
+  local pane = read_pane_id(slug)
+  if pane_alive(pane) then
+    vim.system({ 'tmux', 'kill-pane', '-t', pane }):wait()
   end
   M.open()
 end
+
 function M.send_file_guarded()
   if guard() then
     M.send_file()
@@ -185,7 +209,7 @@ local function scratch_cwd_for(id, fallback_cwd)
 end
 
 function M.open_scratch()
-  local id, _, cwd = session_for_cwd()
+  local id, cwd = project_for_cwd()
   local name = scratch_name_for(id)
   local effective_cwd = scratch_cwd_for(id, cwd)
   local res = vim
