@@ -109,53 +109,54 @@ function M.browse()
 end
 
 function M.find()
-  local host = vim.fn.input('Host: ')
-  if host == '' then
-    return
-  end
-  local path = vim.fn.input('Path: ')
-  if path == '' then
-    return
-  end
-  local pat = vim.fn.input('Name pattern: ')
-  if pat == '' then
-    return
-  end
-  local sq = require('remote.util').shellquote
-  local cmd = { 'ssh', host, string.format('find %s -name %s 2>/dev/null', sq(path), sq(pat)) }
-  local res = require('remote.util').run(cmd, { text = true })
-  if res.code ~= 0 then
-    vim.notify('ssh ' .. host .. ' failed: ' .. (res.stderr or ''), vim.log.levels.ERROR)
-    return
-  end
-  local results = {}
-  for line in (res.stdout or ''):gmatch('[^\n]+') do
-    table.insert(results, line)
-  end
-  local pickers = require('telescope.pickers')
-  local finders = require('telescope.finders')
-  local actions = require('telescope.actions')
-  local action_state = require('telescope.actions.state')
-  local conf = require('telescope.config').values
+  require('remote.hosts').pick(function(host)
+    vim.ui.input({ prompt = 'Path: ' }, function(path)
+      if not path or path == '' then
+        return
+      end
+      vim.ui.input({ prompt = 'Name pattern: ' }, function(pat)
+        if not pat or pat == '' then
+          return
+        end
+        local sq = require('remote.util').shellquote
+        local cmd =
+          { 'ssh', host, string.format('find %s -name %s 2>/dev/null', sq(path), sq(pat)) }
+        local res = require('remote.util').run(cmd, { text = true })
+        if res.code ~= 0 then
+          vim.notify('ssh ' .. host .. ' failed: ' .. (res.stderr or ''), vim.log.levels.ERROR)
+          return
+        end
+        local results = {}
+        for line in (res.stdout or ''):gmatch('[^\n]+') do
+          table.insert(results, line)
+        end
+        local pickers = require('telescope.pickers')
+        local finders = require('telescope.finders')
+        local actions = require('telescope.actions')
+        local action_state = require('telescope.actions.state')
+        local conf = require('telescope.config').values
 
-  pickers
-    .new({}, {
-      prompt_title = string.format('find %s:%s  %s', host, path, pat),
-      finder = finders.new_table({ results = results }),
-      sorter = conf.generic_sorter({}),
-      attach_mappings = function(bufnr)
-        actions.select_default:replace(function()
-          actions.close(bufnr)
-          local sel = action_state.get_selected_entry()
-          if not sel then
-            return
-          end
-          M.open(host, sel[1])
-        end)
-        return true
-      end,
-    })
-    :find()
+        pickers
+          .new({}, {
+            prompt_title = string.format('find %s:%s  %s', host, path, pat),
+            finder = finders.new_table({ results = results }),
+            sorter = conf.generic_sorter({}),
+            attach_mappings = function(bufnr)
+              actions.select_default:replace(function()
+                actions.close(bufnr)
+                local sel = action_state.get_selected_entry()
+                if not sel then
+                  return
+                end
+                M.open(host, sel[1])
+              end)
+              return true
+            end,
+          })
+          :find()
+      end)
+    end)
+  end)
 end
 
 function M.force_binary()

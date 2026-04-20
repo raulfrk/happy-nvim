@@ -81,62 +81,60 @@ function M._build_cmd(host, opts)
 end
 
 function M.prompt()
-  local host = vim.fn.input('Host: ')
-  if host == '' then
-    return
-  end
-  local line = vim.fn.input(
-    'grep [pattern=X path=Y glob=Z +timeout=N +size=NM +regex=ext|perl|fixed +hidden +all +nocase]: '
-  )
-  if line == '' then
-    return
-  end
-  local opts = M._parse_input(line)
-  if not opts.pattern or not opts.path or not opts.glob then
-    vim.notify('pattern, path, glob are required', vim.log.levels.ERROR)
-    return
-  end
-  local cmd = M._build_cmd(host, opts)
-  -- The remote `timeout N` caps server-side runtime; give util.run a
-  -- bit more headroom (+5s) so the outer wait exceeds the remote cap
-  -- and exit code 124 comes from the remote (not our wait giving up).
-  local res = require('remote.util').run(cmd, { text = true }, (opts.timeout + 5) * 1000)
-  if res.code == 124 then
-    vim.notify('grep timed out. Narrow path/glob or pass +timeout=60', vim.log.levels.WARN)
-    return
-  end
-  local results = {}
-  for line_out in (res.stdout or ''):gmatch('[^\n]+') do
-    table.insert(results, line_out)
-  end
-  if #results == 0 then
-    vim.notify('no matches', vim.log.levels.INFO)
-    return
-  end
-  local pickers = require('telescope.pickers')
-  local finders = require('telescope.finders')
-  local actions = require('telescope.actions')
-  local action_state = require('telescope.actions.state')
-  local conf = require('telescope.config').values
+  require('remote.hosts').pick(function(host)
+    local line = vim.fn.input(
+      'grep [pattern=X path=Y glob=Z +timeout=N +size=NM +regex=ext|perl|fixed +hidden +all +nocase]: '
+    )
+    if line == '' then
+      return
+    end
+    local opts = M._parse_input(line)
+    if not opts.pattern or not opts.path or not opts.glob then
+      vim.notify('pattern, path, glob are required', vim.log.levels.ERROR)
+      return
+    end
+    local cmd = M._build_cmd(host, opts)
+    -- The remote `timeout N` caps server-side runtime; give util.run a
+    -- bit more headroom (+5s) so the outer wait exceeds the remote cap
+    -- and exit code 124 comes from the remote (not our wait giving up).
+    local res = require('remote.util').run(cmd, { text = true }, (opts.timeout + 5) * 1000)
+    if res.code == 124 then
+      vim.notify('grep timed out. Narrow path/glob or pass +timeout=60', vim.log.levels.WARN)
+      return
+    end
+    local results = {}
+    for line_out in (res.stdout or ''):gmatch('[^\n]+') do
+      table.insert(results, line_out)
+    end
+    if #results == 0 then
+      vim.notify('no matches', vim.log.levels.INFO)
+      return
+    end
+    local pickers = require('telescope.pickers')
+    local finders = require('telescope.finders')
+    local actions = require('telescope.actions')
+    local action_state = require('telescope.actions.state')
+    local conf = require('telescope.config').values
 
-  pickers
-    .new({}, {
-      prompt_title = string.format('%s:%s  %s', host, opts.path, opts.pattern),
-      finder = finders.new_table({ results = results }),
-      sorter = conf.generic_sorter({}),
-      attach_mappings = function(bufnr)
-        actions.select_default:replace(function()
-          actions.close(bufnr)
-          local sel = action_state.get_selected_entry()
-          if not sel then
-            return
-          end
-          require('remote.browse').open(host, sel[1])
-        end)
-        return true
-      end,
-    })
-    :find()
+    pickers
+      .new({}, {
+        prompt_title = string.format('%s:%s  %s', host, opts.path, opts.pattern),
+        finder = finders.new_table({ results = results }),
+        sorter = conf.generic_sorter({}),
+        attach_mappings = function(bufnr)
+          actions.select_default:replace(function()
+            actions.close(bufnr)
+            local sel = action_state.get_selected_entry()
+            if not sel then
+              return
+            end
+            require('remote.browse').open(host, sel[1])
+          end)
+          return true
+        end,
+      })
+      :find()
+  end)
 end
 
 function M.setup() end -- keymaps in lua/plugins/remote.lua
