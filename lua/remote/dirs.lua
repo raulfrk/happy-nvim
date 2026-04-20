@@ -62,6 +62,9 @@ function M._fetch_sync(host)
   return dirs_list
 end
 
+-- Public alias matching test expectations.
+M._list_remote = M._fetch_sync
+
 function M.pick_for_host(host)
   local entry = M._read_cache(host)
   local now = os.time()

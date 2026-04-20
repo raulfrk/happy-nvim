@@ -53,7 +53,14 @@ function M._build_size_probe_cmd(host, rpath)
 end
 
 function M._is_binary_mime(out)
-  return out:gsub('%s+$', '') == 'binary'
+  local trimmed = out:gsub('%s+$', '')
+  if trimmed == 'binary' then
+    return true
+  end
+  -- Also handle full mime-type output (e.g. `application/octet-stream;
+  -- charset=binary`) — useful when helpers pass through --mime (not just
+  -- --mime-encoding).
+  return trimmed:find('charset=binary') ~= nil
 end
 
 local function check_remote_binary(host, rpath)
@@ -168,6 +175,25 @@ end
 function M.force_binary()
   vim.b.happy_force_binary = 1
   vim.notify('binary guard disabled for this buffer; re-open with :e to retry', vim.log.levels.INFO)
+end
+
+-- Public alias matching test expectations.
+M.open_path = M.open
+
+function M._is_binary(host, rpath)
+  if vim.b.happy_force_binary then
+    return false
+  end
+  if M._fast_path_ext(rpath) then
+    return false
+  end
+  local run = require('remote.util').run
+  local mime = run(M._build_mime_probe_cmd(host, rpath), { text = true })
+  return mime.code == 0 and M._is_binary_mime(mime.stdout or '')
+end
+
+function M._set_override(on)
+  vim.b.happy_force_binary = on and true or nil
 end
 
 function M.setup() end -- keymaps in lua/plugins/remote.lua

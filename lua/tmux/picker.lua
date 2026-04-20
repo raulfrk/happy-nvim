@@ -42,6 +42,10 @@ local function read_idle(session_name)
   return nil
 end
 
+function M._kill_session(name)
+  require('tmux.claude_popup').kill(name)
+end
+
 function M.open()
   local ok, pickers = pcall(require, 'telescope.pickers')
   if not ok then
@@ -104,7 +108,7 @@ function M.open()
           if not entry then
             return
           end
-          require('tmux.claude_popup').kill(entry.value.name)
+          M._kill_session(entry.value.name)
           -- Refresh the picker by closing + reopening
           actions.close(bufnr)
           vim.schedule(M.open)

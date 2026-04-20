@@ -22,7 +22,8 @@ return {
   },
   init = function()
     vim.api.nvim_create_user_command('HappyHostsPrune', function()
-      require('remote.hosts').prune()
-    end, { desc = 'prune unresolvable hosts from frecency DB' })
+      local n = require('remote.hosts').prune()
+      vim.notify(string.format('pruned %d stale hosts', n or 0))
+    end, { desc = 'prune stale hosts (>90 days unused) from frecency DB' })
   end,
 }

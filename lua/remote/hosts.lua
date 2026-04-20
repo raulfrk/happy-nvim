@@ -163,23 +163,30 @@ function M.pick(callback)
     :find()
 end
 
-function M.prune()
+function M.prune(max_age_days)
+  max_age_days = max_age_days or 90
+  local now = os.time()
+  local cutoff = now - (max_age_days * 86400)
   local db = M._read_db()
-  local pruned = 0
-  for host, _ in pairs(db) do
-    local res = vim.system({ 'getent', 'hosts', host }, { text = true }):wait()
-    if res.code ~= 0 then
+  local removed = 0
+  for host, entry in pairs(db) do
+    if (entry.last_used or 0) < cutoff then
       db[host] = nil
-      pruned = pruned + 1
+      removed = removed + 1
     end
   end
-  vim.fn.mkdir(vim.fn.stdpath('data') .. '/happy-nvim', 'p')
-  local f = io.open(DB_PATH, 'w')
-  if f then
-    f:write(vim.json.encode(db))
-    f:close()
+  if removed > 0 then
+    local dir = DB_PATH:match('(.*/)')
+    if dir then
+      vim.fn.mkdir(dir, 'p')
+    end
+    local f = io.open(DB_PATH, 'w')
+    if f then
+      f:write(vim.json.encode(db))
+      f:close()
+    end
   end
-  vim.notify(string.format('pruned %d unresolvable hosts', pruned))
+  return removed
 end
 
 -- Keymaps + :HappyHostsPrune registered statically in lua/plugins/remote.lua.
