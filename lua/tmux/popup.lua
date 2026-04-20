@@ -8,10 +8,7 @@ local function guard(bin, hint)
   if vim.fn.executable(bin) == 1 then
     return true
   end
-  vim.notify(
-    ('%s not found on $PATH. Install: %s'):format(bin, hint),
-    vim.log.levels.WARN
-  )
+  vim.notify(('%s not found on $PATH. Install: %s'):format(bin, hint), vim.log.levels.WARN)
   return false
 end
 
