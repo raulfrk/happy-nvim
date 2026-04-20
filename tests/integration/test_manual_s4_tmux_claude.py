@@ -198,13 +198,7 @@ def test_cl_picker_ctrl_x_kills_selected_session(tmp_path):
     _run_lua(snippet)
     log = out.read_text()
     # The canonical way picker kills sessions is `tmux kill-session -t <name>`.
-    # If picker._kill_session isn't a public fn yet, no argv is captured —
-    # in which case skip the assert. The row can still be covered by a
-    # plenary test of picker internals as a follow-up.
-    if 'kill-session' not in log:
-        import pytest
-        pytest.skip('picker._kill_session not factored as public helper yet')
-    assert 'tmux kill-session -t cc-foo' in log
+    assert 'tmux kill-session -t cc-foo' in log, log
 
 
 def test_cn_prompts_for_slug_and_spawns_session(tmp_path):

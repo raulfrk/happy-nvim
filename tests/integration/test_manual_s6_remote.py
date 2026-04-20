@@ -70,9 +70,7 @@ def test_remote_dirs_picker_reads_from_util_run(tmp_path):
     ''')
     _run_lua(snippet)
     text = out.read_text()
-    if 'NIL' in text or text.strip() == 'nil':
-        import pytest; pytest.skip('remote.dirs._list_remote not factored as helper')
-    assert 'ssh' in text and 'prod01' in text
+    assert 'ssh' in text and 'prod01' in text, text
 
 
 def test_remote_browse_opens_scp_buffer(tmp_path):
@@ -103,9 +101,7 @@ def test_remote_browse_opens_scp_buffer(tmp_path):
     ''')
     _run_lua(snippet)
     text = out.read_text()
-    if text.strip() == 'NIL':
-        import pytest; pytest.skip('remote.browse open helper not factored')
-    assert 'scp://user@host' in text and '/etc/hostname' in text
+    assert 'scp://user@host' in text and '/etc/hostname' in text, text
 
 
 def test_remote_browse_refuses_binary(tmp_path):
@@ -132,9 +128,7 @@ def test_remote_browse_refuses_binary(tmp_path):
     ''')
     _run_lua(snippet)
     text = out.read_text()
-    if text.strip() == 'NIL':
-        import pytest; pytest.skip('remote.browse._is_binary helper not public')
-    assert text.strip() == 'true'
+    assert text.strip() == 'true', text
 
 
 def test_remote_browse_override_skips_binary_check(tmp_path):
@@ -164,8 +158,6 @@ def test_remote_browse_override_skips_binary_check(tmp_path):
     ''')
     _run_lua(snippet)
     text = out.read_text()
-    if text.strip() == 'NIL':
-        import pytest; pytest.skip('remote.browse override helper not public')
     # Override should have prevented the util.run call → called == false.
     assert text.strip() == 'false', text
 
@@ -193,6 +185,4 @@ def test_happy_hosts_prune_reports_count(tmp_path):
     ''')
     _run_lua(snippet)
     text = out.read_text().strip()
-    if text == 'NIL':
-        import pytest; pytest.skip('hosts.prune not exposed or not implemented')
     assert int(text) >= 2, f'expected >=2 pruned, got {text}'
