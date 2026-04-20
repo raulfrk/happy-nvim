@@ -189,6 +189,67 @@ function M.prune(max_age_days)
   return removed
 end
 
+function M.home_dir(host)
+  local db = M._read_db()
+  local entry = db[host]
+  if not entry then
+    return nil
+  end
+  return entry.home_dir
+end
+
+function M.record_home_dir(host, home)
+  local db = M._read_db()
+  db[host] = db[host] or { visits = 0, last_used = 0 }
+  db[host].home_dir = home
+  local dir = DB_PATH:match('(.*/)')
+  if dir then
+    vim.fn.mkdir(dir, 'p')
+  end
+  local f = io.open(DB_PATH, 'w')
+  if f then
+    f:write(vim.json.encode(db))
+    f:close()
+  end
+end
+
+-- Probe + cache $HOME for a host. Lazy; callers only trigger it when a
+-- path they're about to use starts w/ '~/'. Runs via ssh_exec (so it
+-- rides the ControlMaster socket once it's been established).
+function M.ensure_home_dir(host)
+  local cached = M.home_dir(host)
+  if cached then
+    return cached
+  end
+  local exec = require('remote.ssh_exec')
+  local res = exec.run(host, 'printf %s "$HOME"')
+  if res.code ~= 0 then
+    return nil
+  end
+  local home = (res.stdout or ''):gsub('%s+$', '')
+  if home == '' then
+    return nil
+  end
+  M.record_home_dir(host, home)
+  return home
+end
+
+-- Expand a single leading ~ against the cached $HOME for `host`. If the
+-- path doesn't start with '~/' (or is just '~'), return unchanged.
+function M.expand_path(host, path)
+  if path == '~' then
+    return M.home_dir(host) or path
+  end
+  if path:sub(1, 2) ~= '~/' then
+    return path
+  end
+  local home = M.home_dir(host)
+  if not home then
+    return path
+  end
+  return home .. path:sub(2)
+end
+
 -- Keymaps + :HappyHostsPrune registered statically in lua/plugins/remote.lua.
 function M.setup() end
 
