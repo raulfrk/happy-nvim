@@ -81,45 +81,31 @@ local function check_remote_binary(host, rpath)
 end
 
 function M.open(host, rpath)
-  -- Fast-path extension check (advisory, no SSH)
   if M._fast_path_ext(rpath) and not vim.b.happy_force_binary then
     vim.notify(
       string.format(
-        'Binary extension detected for %s. Use :!scp host:path /tmp/ or <leader>sO to force.',
+        'Binary extension detected for %s. Use <leader>sO to force.',
         rpath
       ),
       vim.log.levels.WARN
     )
     return
   end
-  -- Authoritative probe
   if not vim.b.happy_force_binary then
     local blocked, reason = check_remote_binary(host, rpath)
     if blocked then
       vim.notify(
-        string.format(
-          '%s: %s. :!scp host:path /tmp/ manually, or <leader>sO to force.',
-          rpath,
-          reason
-        ),
+        string.format('%s: %s. <leader>sO to force.', rpath, reason),
         vim.log.levels.WARN
       )
       return
     end
   end
-  vim.cmd(string.format('edit scp://%s/%s', host, rpath))
+  require('remote.ssh_buffer').open(host, rpath)
 end
 
 function M.browse()
-  local host = vim.fn.input('Host: ')
-  if host == '' then
-    return
-  end
-  local path = vim.fn.input('Path: ')
-  if path == '' then
-    return
-  end
-  vim.cmd(string.format('edit scp://%s/%s/', host, path))
+  require('remote.ssh_buffer').browse_prompt()
 end
 
 function M.find()
