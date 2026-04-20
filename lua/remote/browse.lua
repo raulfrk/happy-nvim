@@ -141,7 +141,7 @@ function M.find()
             prompt_title = string.format('find %s:%s  %s', host, path, pat),
             finder = finders.new_table({ results = results }),
             sorter = conf.generic_sorter({}),
-            attach_mappings = function(bufnr)
+            attach_mappings = function(bufnr, map)
               actions.select_default:replace(function()
                 actions.close(bufnr)
                 local sel = action_state.get_selected_entry()
@@ -149,6 +149,51 @@ function M.find()
                   return
                 end
                 M.open(host, sel[1])
+              end)
+              map({ 'i', 'n' }, '<C-g>', function()
+                local sel = action_state.get_selected_entry()
+                if not sel then
+                  return
+                end
+                actions.close(bufnr)
+                vim.ui.input({ prompt = 'grep pattern: ' }, function(pat)
+                  if not pat or pat == '' then
+                    return
+                  end
+                  require('remote.grep').run({ host = host, path = sel[1], pattern = pat })
+                end)
+              end)
+              map({ 'i', 'n' }, '<C-t>', function()
+                local sel = action_state.get_selected_entry()
+                if not sel then
+                  return
+                end
+                actions.close(bufnr)
+                require('remote.tail').start(host, sel[1])
+              end)
+              map({ 'i', 'n' }, '<C-v>', function()
+                local sel = action_state.get_selected_entry()
+                if not sel then
+                  return
+                end
+                actions.close(bufnr)
+                local sq = require('remote.util').shellquote
+                require('tmux._popup').open(
+                  '85%',
+                  '85%',
+                  table.concat(
+                    require('remote.ssh_exec').argv(host, 'less +F ' .. sq(sel[1])),
+                    ' '
+                  )
+                )
+              end)
+              map({ 'i', 'n' }, '<C-y>', function()
+                local sel = action_state.get_selected_entry()
+                if not sel then
+                  return
+                end
+                vim.fn.setreg('+', host .. ':' .. sel[1])
+                vim.notify(('yanked %s:%s'):format(host, sel[1]), vim.log.levels.INFO)
               end)
               return true
             end,
@@ -189,5 +234,7 @@ function M._set_override(on)
 end
 
 function M.setup() end -- keymaps in lua/plugins/remote.lua
+
+M._picker_actions = { '<Enter>', '<C-g>', '<C-t>', '<C-v>', '<C-y>' }
 
 return M

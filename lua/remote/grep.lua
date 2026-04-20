@@ -137,6 +137,44 @@ function M.prompt()
   end)
 end
 
+-- Programmatic entry point used by picker C-g action. Accepts
+-- { host = ..., path = ..., pattern = ... }. Narrows the grep to
+-- `path` if set (vs searching from $HOME).
+function M.run(opts)
+  opts = opts or {}
+  local host = opts.host
+  local pattern = opts.pattern
+  local path = opts.path or '.'
+  if not host or not pattern or pattern == '' then
+    return
+  end
+  local sq = require('remote.util').shellquote
+  local exec = require('remote.ssh_exec')
+  local cmd = string.format('grep -RInE %s %s 2>/dev/null', sq(pattern), sq(path))
+  local res = exec.run(host, cmd)
+  if res.code ~= 0 and res.code ~= 1 then
+    vim.notify('grep failed: ' .. (res.stderr or ''), vim.log.levels.ERROR)
+    return
+  end
+  local qf = {}
+  for line in (res.stdout or ''):gmatch('[^\n]+') do
+    local fname, lnum, text = line:match('^([^:]+):(%d+):(.*)$')
+    if fname and lnum then
+      table.insert(qf, {
+        filename = host .. ':' .. fname,
+        lnum = tonumber(lnum),
+        text = text,
+      })
+    end
+  end
+  if #qf == 0 then
+    vim.notify('no matches', vim.log.levels.INFO)
+    return
+  end
+  vim.fn.setqflist(qf, 'r')
+  vim.cmd('copen')
+end
+
 function M.setup() end -- keymaps in lua/plugins/remote.lua
 
 return M
