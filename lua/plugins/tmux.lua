@@ -12,7 +12,7 @@ return {
   name = 'happy-tmux',
   lazy = false,
   keys = {
-    { '<leader>cc', lazy_cmd('tmux.claude', 'open_guarded'), desc = 'Claude: open/attach pane' },
+    { '<leader>cc', lazy_cmd('tmux.claude', 'open_guarded'), desc = 'Claude: layout-smart split' },
     { '<leader>cf', lazy_cmd('tmux.claude', 'send_file_guarded'), desc = 'Claude: send @file ref' },
     {
       '<leader>cs',
@@ -98,7 +98,25 @@ return {
       desc = 'Claude: quick scratch popup (single-shot)',
     },
     { '<leader>tg', lazy_cmd('tmux.popup', 'lazygit'), desc = 'tmux popup: lazygit' },
-    { '<leader>tt', lazy_cmd('tmux.popup', 'scratch'), desc = 'tmux popup: shell (git root)' },
+    { '<leader>tt', lazy_cmd('tmux.tt', 'open'), desc = 'Shell: popup (project-scoped tt-*)' },
+    { '<leader>tn', lazy_cmd('tmux.tt', 'new_named'), desc = 'Shell: new named tt-<slug>' },
+    { '<leader>tl', lazy_cmd('tmux.tt', 'list'), desc = 'Shell: list tt-* + reattach' },
+    {
+      '<leader>tk',
+      function()
+        local tt = require('tmux.tt')
+        if not tt.exists() then
+          vim.notify('no tt session for this project', vim.log.levels.INFO)
+          return
+        end
+        if vim.fn.confirm("Kill current project's tt shell?", '&Yes\n&No') == 1 then
+          tt.kill()
+          vim.notify('killed ' .. tt.session_name(), vim.log.levels.INFO)
+        end
+      end,
+      desc = 'Shell: kill current project tt session',
+    },
+    { '<leader>tR', lazy_cmd('tmux.tt', 'reset'), desc = 'Shell: reset (kill + respawn)' },
     { '<leader>tb', lazy_cmd('tmux.popup', 'btop'), desc = 'tmux popup: btop' },
   },
 }
