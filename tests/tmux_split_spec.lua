@@ -13,8 +13,12 @@ describe('tmux.split.orient', function()
 
   local function stub_dims(w, h)
     vim.fn.system = function(args)
-      if args[3] == '-p' and args[4]:find('window_width') then return tostring(w) end
-      if args[3] == '-p' and args[4]:find('window_height') then return tostring(h) end
+      if args[3] == '-p' and args[4]:find('window_width') then
+        return tostring(w)
+      end
+      if args[3] == '-p' and args[4]:find('window_height') then
+        return tostring(h)
+      end
       return ''
     end
   end
@@ -30,7 +34,9 @@ describe('tmux.split.orient', function()
   end)
 
   it('degenerate tmux output → horizontal fallback', function()
-    vim.fn.system = function() return 'garbage' end
+    vim.fn.system = function()
+      return 'garbage'
+    end
     eq('h', require('tmux.split').orient())
   end)
 end)
@@ -43,9 +49,15 @@ describe('tmux.split.open', function()
     local orig_sys = vim.system
     vim.system = function(args, opts)
       captured = args
-      return { wait = function() return { code = 0, stdout = '%42\n', stderr = '' } end }
+      return {
+        wait = function()
+          return { code = 0, stdout = '%42\n', stderr = '' }
+        end,
+      }
     end
-    split.orient = function() return 'v' end
+    split.orient = function()
+      return 'v'
+    end
     local pane = split.open('claude', { cwd = '/tmp' })
     vim.system = orig_sys
     assert.truthy(captured)

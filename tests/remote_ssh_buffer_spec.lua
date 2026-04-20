@@ -25,12 +25,22 @@ describe('remote.ssh_buffer', function()
   it('open sets buftype acwrite and readonly=true by default', function()
     ssh_buffer = require('remote.ssh_buffer')
     package.loaded['remote.hosts'] = {
-      ensure_home_dir = function() return '/home/u' end,
-      expand_path = function(_, p) return p end,
+      ensure_home_dir = function()
+        return '/home/u'
+      end,
+      expand_path = function(_, p)
+        return p
+      end,
     }
-    package.loaded['remote.browse'] = { _is_binary = function() return false end }
+    package.loaded['remote.browse'] = {
+      _is_binary = function()
+        return false
+      end,
+    }
     package.loaded['remote.ssh_exec'] = {
-      run = function() return { code = 0, stdout = 'hello\nworld\n', stderr = '' } end,
+      run = function()
+        return { code = 0, stdout = 'hello\nworld\n', stderr = '' }
+      end,
     }
     local buf = ssh_buffer.open('h', '/tmp/x.txt')
     assert.are.equal('acwrite', vim.bo[buf].buftype)
@@ -44,12 +54,22 @@ describe('remote.ssh_buffer', function()
   it('toggle_writable flips vim.b.happy_ssh_writable + clears readonly', function()
     ssh_buffer = require('remote.ssh_buffer')
     package.loaded['remote.hosts'] = {
-      ensure_home_dir = function() return '/h' end,
-      expand_path = function(_, p) return p end,
+      ensure_home_dir = function()
+        return '/h'
+      end,
+      expand_path = function(_, p)
+        return p
+      end,
     }
-    package.loaded['remote.browse'] = { _is_binary = function() return false end }
+    package.loaded['remote.browse'] = {
+      _is_binary = function()
+        return false
+      end,
+    }
     package.loaded['remote.ssh_exec'] = {
-      run = function() return { code = 0, stdout = '', stderr = '' } end,
+      run = function()
+        return { code = 0, stdout = '', stderr = '' }
+      end,
     }
     local buf = ssh_buffer.open('h', '/tmp/y')
     vim.api.nvim_set_current_buf(buf)

@@ -20,19 +20,37 @@ describe('remote.tail', function()
     local tail = require('remote.tail')
     tail._set_state_dir_for_test(vim.fn.tempname())
     package.loaded['remote.ssh_exec'] = {
-      argv = function(h, c) return { 'ssh', h, c } end,
+      argv = function(h, c)
+        return { 'ssh', h, c }
+      end,
     }
-    package.loaded['remote.watch'] = { scan = function() return {} end }
+    package.loaded['remote.watch'] = {
+      scan = function()
+        return {}
+      end,
+    }
     local captured
     vim.system = function(args)
       if args[1] == 'tmux' and args[2] == 'has-session' then
-        return { wait = function() return { code = 1 } end }
+        return {
+          wait = function()
+            return { code = 1 }
+          end,
+        }
       end
       if args[1] == 'tmux' and args[2] == 'new-session' then
         captured = args
-        return { wait = function() return { code = 0 } end }
+        return {
+          wait = function()
+            return { code = 0 }
+          end,
+        }
       end
-      return { wait = function() return { code = 0, stdout = '', stderr = '' } end }
+      return {
+        wait = function()
+          return { code = 0, stdout = '', stderr = '' }
+        end,
+      }
     end
     tail.start('h', '/tmp/f.log', { open_buffer = false })
     assert.truthy(captured)

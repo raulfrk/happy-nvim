@@ -115,32 +115,36 @@ local function attach_scratch(host, path, state_file, session)
   end
   local pos = vim.uv.fs_stat(state_file) and vim.uv.fs_stat(state_file).size or 0
   local watcher = vim.uv.new_fs_event()
-  watcher:start(state_file, {}, vim.schedule_wrap(function(err)
-    if err then
-      return
-    end
-    local stat = vim.uv.fs_stat(state_file)
-    if not stat then
-      return
-    end
-    if stat.size <= pos then
+  watcher:start(
+    state_file,
+    {},
+    vim.schedule_wrap(function(err)
+      if err then
+        return
+      end
+      local stat = vim.uv.fs_stat(state_file)
+      if not stat then
+        return
+      end
+      if stat.size <= pos then
+        pos = stat.size
+        return
+      end
+      local fd = vim.uv.fs_open(state_file, 'r', 438)
+      if not fd then
+        return
+      end
+      local delta = vim.uv.fs_read(fd, stat.size - pos, pos)
+      vim.uv.fs_close(fd)
       pos = stat.size
-      return
-    end
-    local fd = vim.uv.fs_open(state_file, 'r', 438)
-    if not fd then
-      return
-    end
-    local delta = vim.uv.fs_read(fd, stat.size - pos, pos)
-    vim.uv.fs_close(fd)
-    pos = stat.size
-    if not delta or delta == '' then
-      return
-    end
-    local new_lines = vim.split(delta, '\n', { plain = true, trimempty = true })
-    append_lines(buf, new_lines)
-    dispatch_watches(host, path, new_lines)
-  end))
+      if not delta or delta == '' then
+        return
+      end
+      local new_lines = vim.split(delta, '\n', { plain = true, trimempty = true })
+      append_lines(buf, new_lines)
+      dispatch_watches(host, path, new_lines)
+    end)
+  )
   vim.b[buf].happy_tail_session = session
   vim.b[buf].happy_tail_host = host
   vim.b[buf].happy_tail_path = path

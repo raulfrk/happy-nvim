@@ -69,14 +69,10 @@ function M._push(host, abs_path, lines)
   local q = util().shellquote(abs_path)
   local body = table.concat(lines, '\n') .. '\n'
   local done, result = false, nil
-  vim.system(
-    exec().argv(host, 'cat > ' .. q),
-    { text = true, stdin = body },
-    function(r)
-      result = r
-      done = true
-    end
-  )
+  vim.system(exec().argv(host, 'cat > ' .. q), { text = true, stdin = body }, function(r)
+    result = r
+    done = true
+  end)
   vim.wait(60000, function()
     return done
   end, 50)
@@ -133,10 +129,7 @@ function M.open(host, path)
     buffer = buf,
     callback = function()
       if not vim.b[buf].happy_ssh_writable then
-        vim.notify(
-          'ssh buffer is read-only; <leader>sw to enable writes',
-          vim.log.levels.WARN
-        )
+        vim.notify('ssh buffer is read-only; <leader>sw to enable writes', vim.log.levels.WARN)
         return
       end
       local content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)

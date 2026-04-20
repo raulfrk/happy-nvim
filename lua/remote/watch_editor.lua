@@ -74,7 +74,10 @@ function M.open(host, path)
         })
       end
       vim.bo[buf].modified = false
-      vim.notify(('saved %d watch patterns for %s:%s'):format(#parsed, host, path), vim.log.levels.INFO)
+      vim.notify(
+        ('saved %d watch patterns for %s:%s'):format(#parsed, host, path),
+        vim.log.levels.INFO
+      )
     end,
   })
   vim.keymap.set('n', 'q', function()

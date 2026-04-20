@@ -19,9 +19,12 @@ end
 function M.argv(host, cmd)
   local argv = {
     'ssh',
-    '-o', 'ControlMaster=auto',
-    '-o', 'ControlPath=' .. ctl_dir() .. '/%C',
-    '-o', 'ControlPersist=5m',
+    '-o',
+    'ControlMaster=auto',
+    '-o',
+    'ControlPath=' .. ctl_dir() .. '/%C',
+    '-o',
+    'ControlPersist=5m',
     host,
   }
   if type(cmd) == 'table' then

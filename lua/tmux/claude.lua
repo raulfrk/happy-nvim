@@ -219,21 +219,25 @@ function M.open_scratch()
     vim.notify('failed to spawn scratch claude: ' .. (res.stderr or ''), vim.log.levels.ERROR)
     return
   end
-  vim.system({
-    'tmux',
-    'display-popup',
-    '-E',
-    '-w',
-    '85%',
-    '-h',
-    '85%',
-    'tmux',
-    'attach',
-    '-t',
-    name,
-  }, {}, vim.schedule_wrap(function()
-    vim.system({ 'tmux', 'kill-session', '-t', name }):wait()
-  end))
+  vim.system(
+    {
+      'tmux',
+      'display-popup',
+      '-E',
+      '-w',
+      '85%',
+      '-h',
+      '85%',
+      'tmux',
+      'attach',
+      '-t',
+      name,
+    },
+    {},
+    vim.schedule_wrap(function()
+      vim.system({ 'tmux', 'kill-session', '-t', name }):wait()
+    end)
+  )
 end
 
 function M.open_scratch_guarded()

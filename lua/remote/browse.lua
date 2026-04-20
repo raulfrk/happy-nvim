@@ -83,10 +83,7 @@ end
 function M.open(host, rpath)
   if M._fast_path_ext(rpath) and not vim.b.happy_force_binary then
     vim.notify(
-      string.format(
-        'Binary extension detected for %s. Use <leader>sO to force.',
-        rpath
-      ),
+      string.format('Binary extension detected for %s. Use <leader>sO to force.', rpath),
       vim.log.levels.WARN
     )
     return
@@ -94,10 +91,7 @@ function M.open(host, rpath)
   if not vim.b.happy_force_binary then
     local blocked, reason = check_remote_binary(host, rpath)
     if blocked then
-      vim.notify(
-        string.format('%s: %s. <leader>sO to force.', rpath, reason),
-        vim.log.levels.WARN
-      )
+      vim.notify(string.format('%s: %s. <leader>sO to force.', rpath, reason), vim.log.levels.WARN)
       return
     end
   end
@@ -181,10 +175,7 @@ function M.find()
                 require('tmux._popup').open(
                   '85%',
                   '85%',
-                  table.concat(
-                    require('remote.ssh_exec').argv(host, 'less +F ' .. sq(sel[1])),
-                    ' '
-                  )
+                  table.concat(require('remote.ssh_exec').argv(host, 'less +F ' .. sq(sel[1])), ' ')
                 )
               end)
               map({ 'i', 'n' }, '<C-y>', function()

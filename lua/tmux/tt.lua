@@ -73,7 +73,11 @@ function M.open()
   if not M.ensure(name) then
     return
   end
-  require('tmux._popup').open(M._config.popup.width, M._config.popup.height, 'tmux attach -t ' .. name)
+  require('tmux._popup').open(
+    M._config.popup.width,
+    M._config.popup.height,
+    'tmux attach -t ' .. name
+  )
 end
 
 function M.new_named()
@@ -86,7 +90,11 @@ function M.new_named()
     if not M.ensure(name) then
       return
     end
-    require('tmux._popup').open(M._config.popup.width, M._config.popup.height, 'tmux attach -t ' .. name)
+    require('tmux._popup').open(
+      M._config.popup.width,
+      M._config.popup.height,
+      'tmux attach -t ' .. name
+    )
   end)
 end
 
