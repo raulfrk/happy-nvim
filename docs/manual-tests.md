@@ -170,6 +170,36 @@ Requires a real reachable ssh host.
 - [ ] Popup close (`ctrl-d` / `prefix+d`) → `tmux ls` shows scratch session gone.
 - [ ] Remote project: `<leader>cq` uses sandbox dir (claude inherits `.claude/settings.local.json`).
 
+## §15 cc split layout (CI-covered partially)
+
+| # | Surface | Test |
+|---|---|---|
+| 15.1 | `<leader>cc` on a wide window | Splits vertically (side-by-side) |
+| 15.2 | `<leader>cc` on a tall/square window | Splits horizontally (stacked) |
+| 15.3 | Same window, two `cd` projects | Each gets its own pane id (no collision) |
+
+## §16 tt-* shell family
+
+| # | Surface | Test |
+|---|---|---|
+| 16.1 | `<leader>tt` | Spawns `tt-<slug>` + opens popup attached (CI-covered) |
+| 16.2 | `<leader>tn` → enter "foo" | Creates `tt-foo`, opens popup |
+| 16.3 | `<leader>tl` | Lists tt-* sessions, Enter attaches, C-x kills (CI-covered) |
+| 16.4 | Close popup | Session persists; `<leader>tt` reattaches |
+
+## §17 Tail watches + detach/resume
+
+| # | Surface | Test |
+|---|---|---|
+| 17.1 | `<leader>sL` → host → log path | Starts `tail-<host>-<slug>` tmux session; scratch buf opens tailing |
+| 17.2 | Close scratch w/ `q` | Tmux session stays; state file keeps growing |
+| 17.3 | `<leader>sP` → Enter | Reattaches; scratch shows existing + new lines |
+| 17.4 | `<leader>sp` inside tail | Watch editor opens; edit + :w persists to JSON |
+| 17.5 | Line matches active pattern | `vim.notify` fires w/ level (CI-covered) |
+| 17.6 | Oneshot pattern | Flips inactive after first match (CI-covered) |
+| 17.7 | Close + reopen nvim; `<leader>sp` | Previously-saved patterns reload |
+| 17.8 | `<leader>sT` (deprecated) | Warns then forwards to sL |
+
 ---
 
 Last updated: SP4 parallel claude landed 2026-04-19.

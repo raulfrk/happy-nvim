@@ -20,7 +20,18 @@ return {
     { '<leader>sf', lazy_cmd('remote.browse', 'find'), desc = 'find remote files (ssh find)' },
     { '<leader>sg', lazy_cmd('remote.grep', 'prompt'), desc = 'remote grep (niced ssh grep)' },
     { '<leader>sO', lazy_cmd('remote.browse', 'force_binary'), desc = 'override binary guard' },
-    { '<leader>sL', lazy_cmd('remote.tail', 'tail_log'), desc = 'ssh: detachable log tail' },
+    { '<leader>sL', lazy_cmd('remote.tail', 'tail_log'), desc = 'ssh: log tail (watch-aware, detachable)' },
+    {
+      '<leader>sT',
+      function()
+        vim.notify(
+          '<leader>sT is deprecated — use <leader>sL (log tail).',
+          vim.log.levels.WARN
+        )
+        require('remote.tail').tail_log()
+      end,
+      desc = '[deprecated] use <leader>sL',
+    },
     {
       '<leader>sp',
       function()

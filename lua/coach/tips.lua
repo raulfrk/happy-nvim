@@ -136,14 +136,41 @@ return {
     category = 'remote',
   },
   {
-    keys = '<leader>sT',
-    desc = 'remote log tail (tail -F streaming)',
+    keys = '<leader>sL',
+    desc = 'ssh: log tail w/ watch patterns (watch-aware, detachable)',
+    category = 'remote',
+  },
+  {
+    keys = '<leader>sp',
+    desc = 'edit watch patterns (inside tail scratch buffer)',
+    category = 'remote',
+  },
+  {
+    keys = '<leader>sP',
+    desc = 'tails picker — Enter reattaches, C-x kills active tail session',
     category = 'remote',
   },
   {
     keys = '<leader>sf',
-    desc = 'remote file-name finder (find + telescope)',
+    desc = 'remote file-name finder (find + telescope) — C-g grep · C-t tail · C-v less · C-y yank',
     category = 'remote',
+  },
+  {
+    keys = '<leader>sT',
+    desc = '[deprecated] use <leader>sL for log tail',
+    category = 'remote',
+  },
+
+  -- SP1 cockpit tips
+  {
+    keys = '<leader>cp / <leader>cc',
+    desc = '<leader>cp is primary claude popup; <leader>cc splits in place',
+    category = 'claude',
+  },
+  {
+    keys = '<leader>tt / <leader>tl',
+    desc = '<leader>tt opens project-scoped tt-* shell popup; <leader>tl picks from list',
+    category = 'claude',
   },
 
   -- SP2 quick-pivot hub
