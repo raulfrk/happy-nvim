@@ -150,11 +150,11 @@ function M.find()
                   return
                 end
                 actions.close(bufnr)
-                vim.ui.input({ prompt = 'grep pattern: ' }, function(pat)
-                  if not pat or pat == '' then
+                vim.ui.input({ prompt = 'grep pattern: ' }, function(grep_pat)
+                  if not grep_pat or grep_pat == '' then
                     return
                   end
-                  require('remote.grep').run({ host = host, path = sel[1], pattern = pat })
+                  require('remote.grep').run({ host = host, path = sel[1], pattern = grep_pat })
                 end)
               end)
               map({ 'i', 'n' }, '<C-t>', function()
@@ -171,11 +171,14 @@ function M.find()
                   return
                 end
                 actions.close(bufnr)
-                local sq = require('remote.util').shellquote
+                local util_sq = require('remote.util').shellquote
                 require('tmux._popup').open(
                   '85%',
                   '85%',
-                  table.concat(require('remote.ssh_exec').argv(host, 'less +F ' .. sq(sel[1])), ' ')
+                  table.concat(
+                    require('remote.ssh_exec').argv(host, 'less +F ' .. util_sq(sel[1])),
+                    ' '
+                  )
                 )
               end)
               map({ 'i', 'n' }, '<C-y>', function()
