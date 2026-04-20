@@ -34,7 +34,11 @@ def test_scratch_spawns_kills_on_close(tmp_path):
         local claude = require('tmux.claude')
         claude.open_scratch()
 
+        -- saved_cb is the display-popup on-close callback, wrapped in
+        -- vim.schedule_wrap. Calling it queues the kill-session onto the
+        -- main loop; vim.wait drains that queue.
         if saved_cb then saved_cb() end
+        vim.wait(500, function() return false end, 20)
 
         local fh = io.open('{argv_log}', 'w')
         for _, c in ipairs(calls) do fh:write(c .. '\\n') end

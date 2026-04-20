@@ -88,18 +88,42 @@ def test_cC_open_fresh_kills_existing_session_then_opens(tmp_path):
         vim.opt.rtp:prepend(repo)
         vim.env.TMUX = 'dummy'
         local calls = {{}}
+        -- Stateful stub: first open_fresh_guarded pass sees an alive pane (%42)
+        -- so kill-pane fires.  After kill, show-option returns empty so the
+        -- second open() call goes down the split-window path.
+        local killed = false
         vim.system = function(cmd, opts, cb)
-          table.insert(calls, table.concat(cmd, ' '))
+          local key = type(cmd) == 'table' and table.concat(cmd, ' ') or tostring(cmd)
+          table.insert(calls, key)
+          local stdout = ''
+          local code = 0
+          if key:match('kill%-pane') then
+            killed = true
+          elseif key:match('show%-option') then
+            -- Before kill: return an existing pane id.
+            -- After kill: return nothing so open() spawns a new split.
+            if not killed then stdout = '%%42\\n' else code = 1 end
+          elseif key:match('list%-panes') then
+            -- Pane is alive before kill.
+            if not killed then stdout = '%%42\\n' else code = 1 end
+          elseif key:match('split%-window') then
+            stdout = '%%99\\n'
+          elseif key:match('display%-message') then
+            stdout = '200\\n'
+          end
           local handle = {{ _closed = false }}
           function handle:is_closing() return self._closed end
           function handle:kill() self._closed = true end
-          function handle:wait() return {{ code = 0, stdout = '', stderr = '' }} end
-          if cb then cb({{ code = 0 }}) end
+          function handle:wait() return {{ code = code, stdout = stdout, stderr = '' }} end
+          if cb then cb({{ code = code }}) end
           return handle
         end
-        -- Don't stub vim.fn.system — let session_alive's
-        -- `tmux has-session` call return non-zero naturally (no tmux server
-        -- in clean headless env) so claude.open takes the new-session path.
+        vim.fn.system = function(cmd)
+          local key = type(cmd) == 'table' and table.concat(cmd, ' ') or tostring(cmd)
+          table.insert(calls, 'FN:' .. key)
+          if key:match('display%-message') then return '200\\n' end
+          return ''
+        end
         package.loaded['happy.projects.registry'] = {{
           add = function() return 'proj-x' end,
           get = function() return {{ kind = 'local', path = '/tmp' }} end,
@@ -115,10 +139,10 @@ def test_cC_open_fresh_kills_existing_session_then_opens(tmp_path):
     ''')
     _run_lua(snippet)
     log = out.read_text()
-    # Since session wasn't alive initially (has-session fails in our stub),
-    # the kill-session step may be skipped. What MUST happen: new-session
-    # spawns cc-proj-x.
-    assert 'tmux new-session -d -s cc-proj-x' in log, log
+    # open_fresh_guarded: read existing pane id → kill-pane old pane →
+    # open() → split-window spawns a new pane for proj-x.
+    assert 'tmux kill-pane -t' in log, f'kill-pane missing: {log}'
+    assert 'tmux split-window' in log, f'split-window missing: {log}'
 
 
 def test_cP_popup_fresh_kills_then_respawns(tmp_path):

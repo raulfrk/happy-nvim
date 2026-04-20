@@ -52,8 +52,8 @@ def test_cf_routes_to_current_project_session(tmp_path):
 
 
 def test_prewarm_attach_does_not_spawn_new_session(tmp_path):
-    """If cc-<id> is already alive, <Space>cp should attach, not
-    new-session."""
+    """If the per-project pane is already alive, <leader>cc should
+    select-pane (focus), not spawn a new split."""
     out = tmp_path / 'argv.out'
     snippet = textwrap.dedent(f'''
         local repo = '{os.getcwd()}'
@@ -61,24 +61,28 @@ def test_prewarm_attach_does_not_spawn_new_session(tmp_path):
         vim.env.TMUX = 'dummy'
         local calls = {{}}
         vim.system = function(cmd, opts, cb)
-          table.insert(calls, table.concat(cmd, ' '))
+          local key = type(cmd) == 'table' and table.concat(cmd, ' ') or tostring(cmd)
+          table.insert(calls, key)
+          local stdout = ''
+          local code = 0
+          if key:match('show%-option') then
+            -- Return a pre-existing pane id so pane_alive branch is checked.
+            stdout = '%%77\\n'
+          elseif key:match('list%-panes') then
+            -- Pane is alive -> select-pane, no new split.
+            stdout = '%%77\\n'
+          end
           local handle = {{ _closed = false }}
           function handle:is_closing() return self._closed end
           function handle:kill() self._closed = true end
-          function handle:wait()
-            -- has-session returns success -> already alive.
-            if cmd[2] == 'has-session' then
-              return {{ code = 0 }}
-            end
-            return {{ code = 0 }}
-          end
-          if cb then cb({{ code = 0 }}) end
+          function handle:wait() return {{ code = code, stdout = stdout, stderr = '' }} end
+          if cb then cb({{ code = code }}) end
           return handle
         end
-        -- claude.open() uses vim.fn.system for has-session (sync path).
-        -- Stub it so shell_error stays 0 -> session_alive=true -> no new-session.
         vim.fn.system = function(cmd)
-          table.insert(calls, type(cmd) == 'table' and table.concat(cmd, ' ') or tostring(cmd))
+          local key = type(cmd) == 'table' and table.concat(cmd, ' ') or tostring(cmd)
+          table.insert(calls, 'FN:' .. key)
+          if key:match('display%-message') then return '200\\n' end
           return ''
         end
         package.loaded['happy.projects.registry'] = {{
@@ -96,6 +100,6 @@ def test_prewarm_attach_does_not_spawn_new_session(tmp_path):
     ''')
     _run_lua(snippet)
     log = out.read_text()
-    # has-session queried, then switch-client called. new-session must NOT appear.
-    assert 'tmux has-session -t cc-proj-prewarm' in log
-    assert 'tmux new-session' not in log, f'prewarm must not spawn: {log}'
+    # Pane already alive: select-pane called, no new split spawned.
+    assert 'tmux select-pane -t' in log, f'select-pane missing: {log}'
+    assert 'tmux split-window' not in log, f'must not spawn new split: {log}'

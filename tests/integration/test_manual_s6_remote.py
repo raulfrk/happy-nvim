@@ -73,35 +73,49 @@ def test_remote_dirs_picker_reads_from_util_run(tmp_path):
     assert 'ssh' in text and 'prod01' in text, text
 
 
-def test_remote_browse_opens_scp_buffer(tmp_path):
+def test_remote_browse_opens_ssh_buffer(tmp_path):
+    """browse.open() delegates to ssh_buffer.open(host, path), which creates
+    a buffer named ssh://<host>/<path>. Assert the correct host+path are
+    forwarded (not the old scp:// vim.cmd path)."""
     out = tmp_path / 'cmd.out'
     snippet = textwrap.dedent(f'''
         local repo = '{os.getcwd()}'
         vim.opt.rtp:prepend(repo)
-        local captured
-        vim.cmd = (function(orig)
-          return function(c)
-            if type(c) == 'string' and c:match('^edit scp://') then
-              captured = c
-              return
+        local captured_host, captured_path
+        -- Stub ssh_buffer.open to capture args and skip real SSH.
+        package.loaded['remote.ssh_buffer'] = {{
+          open = function(h, p) captured_host = h; captured_path = p end,
+          browse_prompt = function() end,
+        }}
+        -- Stub remote.util: mime run returns text/plain (not binary); size run
+        -- returns code=1 so the size branch is skipped entirely. Both avoid
+        -- any real SSH call.
+        local call_index = 0
+        package.loaded['remote.util'] = {{
+          run = function(cmd, opts, timeout)
+            call_index = call_index + 1
+            if call_index == 1 then
+              -- mime probe: not binary
+              return {{ code = 0, stdout = 'text/plain', stderr = '' }}
+            else
+              -- size probe: failure -> skip size branch
+              return {{ code = 1, stdout = '', stderr = 'no stat' }}
             end
-            return orig(c)
-          end
-        end)(vim.cmd)
-        -- Invoke browse.open('user@host', '/etc/hostname')
+          end,
+          shellquote = function(s) return "'" .. tostring(s) .. "'" end,
+        }}
         local browse = require('remote.browse')
-        if browse.open_path then
-          browse.open_path('user@host', '/etc/hostname')
-        elseif browse._open then
-          browse._open('user@host', '/etc/hostname')
-        end
+        browse.open('user@host', '/etc/hostname')
         local fh = io.open('{out}', 'w')
-        fh:write(captured or 'NIL'); fh:close()
+        fh:write((captured_host or 'NIL') .. '|' .. (captured_path or 'NIL'))
+        fh:close()
         vim.cmd('qa!')
     ''')
     _run_lua(snippet)
     text = out.read_text()
-    assert 'scp://user@host' in text and '/etc/hostname' in text, text
+    assert 'user@host' in text, text
+    assert '/etc/hostname' in text, text
+    assert 'NIL' not in text, f'ssh_buffer.open not called: {text}'
 
 
 def test_remote_browse_refuses_binary(tmp_path):

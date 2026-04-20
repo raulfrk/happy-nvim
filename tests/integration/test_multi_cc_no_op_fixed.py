@@ -1,116 +1,99 @@
-"""Regression: <leader>cc in two nvims (two project dirs) creates two
-distinct per-project tmux sessions (cc-<id>).
+"""Regression: <leader>cc in two nvims (two project dirs) tracks pane ids
+under distinct per-project window options (@claude_pane_id_<slug>).
 
-Bug 30.3: the old pane-model implementation stashed `@claude_pane_id`
-on the tmux *window*, so a second nvim sharing the same tmux window
-saw the first project's pane id and no-opped — the second project
-never got its own Claude surface.
+Bug 30.3: the old pane-model stored a single @claude_pane_id window option,
+so a second project sharing the same tmux window would overwrite the first
+project's pane id — the second project hijacked the first project's pane.
 
-The fix switches `<leader>cc` to the per-project session model:
-`require('tmux.claude').open_guarded()` creates a `cc-<id>` session
-via the registry and falls back to "attach via CLI" when not inside
-$TMUX. This test invokes `open_guarded()` headlessly from two
-different cwds (sharing one tmux socket) and asserts both sessions
-exist on the server.
+The fix: pane ids are stored under @claude_pane_id_<slug>, where slug is
+the per-project registry id. Two projects → two distinct option names →
+no collision, each project tracks its own split pane independently.
+
+This test invokes open() headlessly from two different project slugs and
+asserts each uses a distinct @claude_pane_id_<slug> key.
 """
 from __future__ import annotations
 
 import os
-import shutil
 import subprocess
 import textwrap
 from pathlib import Path
 
-from .helpers import tmx
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
-def _make_tmux_wrapper(bin_dir: Path, socket: str) -> None:
-    """Shim `tmux` on PATH so nvim's plain `tmux ...` calls hit our test socket."""
-    real_tmux = shutil.which("tmux") or "/usr/bin/tmux"
-    wrapper = bin_dir / "tmux"
-    wrapper.write_text(textwrap.dedent(f"""\
-        #!/usr/bin/env bash
-        exec {real_tmux} -L {socket} "$@"
-    """))
-    wrapper.chmod(0o755)
-
-
-def _open_cc_in_cwd(cwd: Path, registry_path: Path, bin_dir: Path) -> None:
-    """Headless nvim: cd into cwd, load happy-nvim rtp, call open_guarded()."""
-    env = os.environ | {
-        "HAPPY_PROJECTS_JSON_OVERRIDE": str(registry_path),
-        "PATH": f"{bin_dir}:{os.environ['PATH']}",
-        # Dummy TMUX so guard() passes. The bash wrapper retargets tmux to
-        # our test socket, so switch-client lands on the isolated server.
-        "TMUX": "/tmp/fake-tmux,1,0",
-    }
+def _run_cc_for_slug(slug: str, tmp_path: Path) -> str:
+    """Headless nvim: call open() for a given project slug; return logged cmds."""
+    log = tmp_path / f"argv-{slug}.txt"
+    snippet = textwrap.dedent(f"""
+        local repo = '{REPO_ROOT}'
+        vim.opt.rtp:prepend(repo)
+        vim.env.TMUX = 'dummy'
+        local calls = {{}}
+        vim.system = function(cmd, opts, cb)
+          local key = type(cmd) == 'table' and table.concat(cmd, ' ') or tostring(cmd)
+          table.insert(calls, key)
+          local stdout = ''
+          local code = 0
+          if key:match('show%-option') then
+            -- No existing pane id -> force new split path.
+            stdout = ''
+            code = 1
+          elseif key:match('split%-window') then
+            -- Return a fresh pane id.
+            stdout = '%42\\n'
+          elseif key:match('display%-message') then
+            stdout = '200\\n'
+          end
+          local handle = {{}}
+          function handle:is_closing() return false end
+          function handle:kill() end
+          function handle:wait() return {{ code = code, stdout = stdout, stderr = '' }} end
+          if cb then cb({{ code = code }}) end
+          return handle
+        end
+        vim.fn.system = function(cmd)
+          local key = type(cmd) == 'table' and table.concat(cmd, ' ') or tostring(cmd)
+          table.insert(calls, 'FN:' .. key)
+          if key:match('display%-message') then return '200\\n' end
+          return ''
+        end
+        package.loaded['happy.projects.registry'] = {{
+          add = function() return '{slug}' end,
+          get = function() return {{ kind = 'local', path = '/tmp/{slug}' }} end,
+          touch = function() end,
+          score = function() return 0 end,
+        }}
+        vim.fn.getcwd = function() return '/tmp/{slug}' end
+        require('tmux.claude').open()
+        local fh = io.open('{log}', 'w')
+        for _, c in ipairs(calls) do fh:write(c .. '\\n') end
+        fh:close()
+        vim.cmd('qa!')
+    """).strip()
     subprocess.run(
-        [
-            "nvim",
-            "--headless",
-            "--clean",
-            "-c",
-            f"lua vim.cmd('cd {cwd}')",
-            "-c",
-            f"lua vim.opt.rtp:prepend('{REPO_ROOT}')",
-            "-c",
-            "lua require('tmux.claude').open_guarded()",
-            "-c",
-            "qa!",
-        ],
+        ["nvim", "--clean", "--headless", "-u", "NONE", "-c", f"lua {snippet}"],
         check=True,
         text=True,
         capture_output=True,
-        env=env,
+        timeout=15,
     )
+    return log.read_text()
 
 
-def test_second_window_cc_creates_distinct_session(
-    tmux_socket: str, tmp_path: Path
-):
-    proj_a = tmp_path / "a"
-    proj_a.mkdir()
-    proj_b = tmp_path / "b"
-    proj_b.mkdir()
+def test_second_window_cc_creates_distinct_pane_options(tmp_path: Path):
+    """Two projects → two distinct @claude_pane_id_<slug> set-option calls."""
+    log_a = _run_cc_for_slug("proj-a", tmp_path)
+    log_b = _run_cc_for_slug("proj-b", tmp_path)
 
-    registry_path = tmp_path / "projects.json"
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    _make_tmux_wrapper(bin_dir, tmux_socket)
+    # Each project must record its pane id under its own slug key.
+    assert "@claude_pane_id_proj-a" in log_a, f"proj-a key missing:\n{log_a}"
+    assert "@claude_pane_id_proj-b" in log_b, f"proj-b key missing:\n{log_b}"
 
-    session_a = "cc-a"
-    session_b = "cc-b"
+    # proj-a must NOT write proj-b's key (no cross-project collision).
+    assert "@claude_pane_id_proj-b" not in log_a, f"proj-a clobbered proj-b:\n{log_a}"
+    assert "@claude_pane_id_proj-a" not in log_b, f"proj-b clobbered proj-a:\n{log_b}"
 
-    try:
-        _open_cc_in_cwd(proj_a, registry_path, bin_dir)
-        _open_cc_in_cwd(proj_b, registry_path, bin_dir)
-
-        # Both sessions exist on the isolated test tmux server. Old pane
-        # code never created cc-b — the second nvim would have re-used
-        # proj-a's @claude_pane_id (window-scoped) and no-opped.
-        rc_a = subprocess.run(
-            ["tmux", "-L", tmux_socket, "has-session", "-t", session_a],
-            check=False,
-        ).returncode
-        rc_b = subprocess.run(
-            ["tmux", "-L", tmux_socket, "has-session", "-t", session_b],
-            check=False,
-        ).returncode
-        assert rc_a == 0, f"{session_a} missing"
-        assert rc_b == 0, f"{session_b} missing"
-
-        # Sanity: two *distinct* sessions (not one shared by both).
-        ls = tmx(tmux_socket, "list-sessions", "-F", "#{session_name}")
-        names = set(ls.stdout.split())
-        assert session_a in names and session_b in names, (
-            f"expected both {session_a} and {session_b} in {names!r}"
-        )
-    finally:
-        for s in (session_a, session_b):
-            subprocess.run(
-                ["tmux", "-L", tmux_socket, "kill-session", "-t", s],
-                check=False,
-                capture_output=True,
-            )
+    # Both must actually spawn a split (not no-op).
+    assert "tmux split-window" in log_a, f"no split for proj-a:\n{log_a}"
+    assert "tmux split-window" in log_b, f"no split for proj-b:\n{log_b}"
