@@ -70,6 +70,9 @@ Requires `claude` CLI on $PATH + `$TMUX` set.
 - [ ] After `require('tmux.claude_popup').setup({ popup = { width = '50%' } })` in init.lua, `<Space>cp` opens a narrower popup
 - [ ] Inside Claude popup, press `Ctrl-C` mid-reply — claude interrupts the current generation, popup stays open, history preserved
 - [ ] `<Space>cp` again — same conversation visible (Ctrl-C didn't tear it down)
+- [ ] (CI-covered) `<leader>tg` w/ `lazygit` missing → notify "lazygit not found on $PATH. Install: ..." — popup does NOT flash
+- [ ] (CI-covered) `<leader>tb` w/ `btop` missing → same graceful notify
+- [ ] `<leader>tt` opens shell popup at git root (falls back from $SHELL → zsh → bash → sh if needed)
 
 ## 5. Multi-project Claude
 
